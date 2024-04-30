@@ -12,9 +12,9 @@ Clients on shared container can interact with each other in "coffeelounge". Simp
 
 ## vulns
 
-1. hash function for identification of personal container is weak. has multiple master images.
-2. shared container has misconfigurations allowing access of files of other users (TBD)
-3. coffeelounge has some vuln (TBD)
+1. Hash function for identification of personal container is weak. Has multiple master images.
+2. Shared container has misconfigurations allowing access of files of other users (TBD)
+3. Some vuln in coffeelounge (TBD)
 
 ## flags
 
