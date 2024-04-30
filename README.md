@@ -20,9 +20,9 @@ Clients on shared container can interact with each other in "coffeelounge". Simp
 
 Flags are stored in some user's home on the shared and personal containers. Flags are not stored in cleartext, but are printed in stdout by running some brainfuck code. Brainfuck program needs some input to generate the correct output from. Input could be "ENO".
 
-## techstack
+## stack
 
-- pty wrapper: C, libvterm
+- pty wrapper: xterm.js for prototype; C, libvterm for mvp
 - server: go / next.js (TBD)
 - client: html/css/js / react.js / next.js (TBD)
 - coffeelounge: java (duh)
