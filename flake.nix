@@ -54,6 +54,7 @@
               air
               (templ system)
               vscode-langservers-extracted
+              tailwindcss
               tailwindcss-language-server
             ];
           };

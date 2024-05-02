@@ -1,5 +1,13 @@
+/** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [ "./**/*.html", "./**/*.templ", "./**/*.go", ],
-  theme: { extend: {}, },
+  content: [ "./**/*.templ" ],
+  theme: {
+    extend: {
+      gridTemplateColumns: {
+        'sessions': 'auto min-content min-content',
+      }
+    },
+  },
   plugins: [],
 }
+
