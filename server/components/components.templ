@@ -22,7 +22,7 @@ templ Layout() {
 	</html>
 }
 
-templ Home(sessions []string) {
+templ Home(sessions []string, err string) {
 	@Layout() {
 		<div class="text-3xl pb-6">cafédodo</div>
 		<div class="grid grid-cols-sessions gap-2 font-mono w-full items-center">
@@ -60,6 +60,12 @@ templ Home(sessions []string) {
 		>
 			New Session
 		</button>
+		if err != "" {
+			<div class="flex flex-row w-full rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white shadow-sm justify-center items-center space-x-2">
+				<i class="fa-solid fa-triangle-exclamation" />
+				<div>{ string(fmt.Sprintf("Error: %s", err)) }</div>
+			</div>
+		}
 	}
 }
 

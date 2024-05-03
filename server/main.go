@@ -2,17 +2,30 @@ package main
 
 import (
 	"cafedodo/components"
-	"cafedodo/renderer"
 	"cafedodo/lib"
+	"cafedodo/orchestrator"
+	"cafedodo/renderer"
+	"fmt"
+	"log"
 	"net/http"
 	"slices"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/memstore"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
+
+	port := 6969
+
+	imageTag := "ptwhy"
+
+	o := orchestrator.Instance()
+	o.BuildImage("../ptwhy/", imageTag)
+
+	o.GetContainer()
 
 	engine := gin.Default()
 
@@ -35,13 +48,16 @@ func main() {
 		} else {
 			ptySessions = s.([]string)
 		}
-		c.HTML(http.StatusOK, "", components.Home(ptySessions))
+		e := c.Request.URL.Query().Get("error")
+		fmt.Println(e);
+		c.HTML(http.StatusOK, "", components.Home(ptySessions, e))
 	})
 
 	engine.GET("/session/:ptySession", func(c *gin.Context) {
 		ptySession := c.Param("ptySession")
 		session := sessions.Default(c)
 		s := session.Get("ptySessions")
+		fmt.Println(c.Request.URL.Query().Get("error"));
 		if s == nil || !slices.Contains(s.([]string), ptySession) {
 			c.Redirect(http.StatusTemporaryRedirect, "/?error=session_not_found")
 		} else {
@@ -53,15 +69,42 @@ func main() {
 		session := sessions.Default(c)
 		var ptySessions []string
 		s := session.Get("ptySessions")
-		v := lib.RandomString(32)
+		ptySession := lib.RandomString(32)
 		if s == nil {
 			ptySessions = []string{}
 		} else {
 			ptySessions = s.([]string)
 		}
-		ptySessions = append(ptySessions, v)
+
+		container := o.GetContainer("asdf")
+
+		if container != nil {
+			log.Print(container.ID, ": container exists")
+		} else {
+			response, err := o.CreateContainer(orchestrator.RunContainerOptions {
+				ImageTag: "ptwhy",
+				ContainerName: ptySession,
+				Ports: nat.PortMap {
+					"3000": []nat.PortBinding {
+						{
+							HostIP: "127.0.0.1",
+							HostPort: fmt.Sprint(port),
+						},
+					},
+				},
+			})
+			port++
+			log.Print(response.ID, ": container created")
+			if err != nil {
+				log.Print(err, ": container creation failed")
+				c.Redirect(http.StatusMovedPermanently, "/?error=container_creation_failed")
+			} 
+		}
+		
+		ptySessions = append(ptySessions, ptySession)
 		session.Set("ptySessions", ptySessions)
 		session.Save()
+
 		c.Redirect(http.StatusTemporaryRedirect, "/")
 	})
 
