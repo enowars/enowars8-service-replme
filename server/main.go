@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"slices"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/memstore"
@@ -17,15 +18,10 @@ import (
 )
 
 func main() {
-
-	port := 6969
-
 	imageTag := "ptwhy"
 
 	o := orchestrator.Instance()
 	o.BuildImage("../ptwhy/", imageTag)
-
-	o.GetContainer()
 
 	engine := gin.Default()
 
@@ -53,20 +49,38 @@ func main() {
 		c.HTML(http.StatusOK, "", components.Home(ptySessions, e))
 	})
 
-	engine.GET("/session/:ptySession", func(c *gin.Context) {
-		ptySession := c.Param("ptySession")
-		session := sessions.Default(c)
+	engine.GET("/session/:ptySession", func(ctx *gin.Context) {
+		ptySession := ctx.Param("ptySession")
+		session := sessions.Default(ctx)
 		s := session.Get("ptySessions")
-		fmt.Println(c.Request.URL.Query().Get("error"));
 		if s == nil || !slices.Contains(s.([]string), ptySession) {
-			c.Redirect(http.StatusTemporaryRedirect, "/?error=session_not_found")
-		} else {
-			c.HTML(http.StatusOK, "", components.Session(ptySession))
+			ctx.Redirect(http.StatusTemporaryRedirect, "/?error=session_not_found")
+			return
 		}
+
+		c := o.GetContainer(ptySession)
+		if c == nil {
+			ctx.Redirect(http.StatusTemporaryRedirect, "/?error=container_not_found")
+			return
+		}
+
+		err := o.StartContainer(c.ID)
+		if err != nil {
+			log.Print(err, " :failed to start container ", c.ID)
+			ctx.Redirect(http.StatusTemporaryRedirect, "/?error=could_not_start_container")
+		} else {
+			c = o.GetContainer(ptySession)
+			if len(c.Ports) == 0 {
+				ctx.Redirect(http.StatusTemporaryRedirect, "/?error=no_port_for_container")
+				return
+			}
+			ctx.HTML(http.StatusOK, "", components.Session(ptySession, fmt.Sprint(c.Ports[0].PublicPort)))
+		}
+
 	})
 
-	engine.GET("/api/session/private", func(c *gin.Context) {
-		session := sessions.Default(c)
+	engine.GET("/api/session/private", func(ctx *gin.Context) {
+		session := sessions.Default(ctx)
 		var ptySessions []string
 		s := session.Get("ptySessions")
 		ptySession := lib.RandomString(32)
@@ -76,28 +90,27 @@ func main() {
 			ptySessions = s.([]string)
 		}
 
-		container := o.GetContainer("asdf")
+		c := o.GetContainer(ptySession)
 
-		if container != nil {
-			log.Print(container.ID, ": container exists")
+		if c != nil {
+			log.Print(c.ID, ": container exists")
 		} else {
 			response, err := o.CreateContainer(orchestrator.RunContainerOptions {
 				ImageTag: "ptwhy",
 				ContainerName: ptySession,
 				Ports: nat.PortMap {
-					"3000": []nat.PortBinding {
+					nat.Port("3000/tcp"): []nat.PortBinding {
 						{
 							HostIP: "127.0.0.1",
-							HostPort: fmt.Sprint(port),
+							HostPort: "0",
 						},
 					},
 				},
 			})
-			port++
 			log.Print(response.ID, ": container created")
 			if err != nil {
 				log.Print(err, ": container creation failed")
-				c.Redirect(http.StatusMovedPermanently, "/?error=container_creation_failed")
+				ctx.Redirect(http.StatusMovedPermanently, "/?error=container_creation_failed")
 			} 
 		}
 		
@@ -105,12 +118,12 @@ func main() {
 		session.Set("ptySessions", ptySessions)
 		session.Save()
 
-		c.Redirect(http.StatusTemporaryRedirect, "/")
+		ctx.Redirect(http.StatusTemporaryRedirect, "/")
 	})
 
-	engine.GET("/api/session/private/:ptySession/delete", func(c *gin.Context) {
-		ptySession := c.Param("ptySession")
-		session := sessions.Default(c)
+	engine.GET("/api/session/private/:ptySession/delete", func(ctx *gin.Context) {
+		ptySession := ctx.Param("ptySession")
+		session := sessions.Default(ctx)
 		var ptySessions []string
 		s := session.Get("ptySessions")
 		if s == nil {
@@ -118,6 +131,27 @@ func main() {
 		} else {
 			ptySessions = s.([]string)
 		}
+
+		c := o.GetContainer(ptySession)
+
+		if c != nil {
+			err := o.Client.ContainerKill(o.Context, c.ID, "")
+
+			if err != nil {
+				log.Print(err);
+				ctx.Redirect(http.StatusTemporaryRedirect, "/?error=could_not_kill_container")
+				return
+			}
+
+			err = o.Client.ContainerRemove(o.Context, c.ID, container.RemoveOptions{})
+
+			if err != nil {
+				log.Print(err);
+				ctx.Redirect(http.StatusTemporaryRedirect, "/?error=could_not_remove_container")
+				return
+			}
+		}
+
 		for i, currPtySession := range ptySessions {
 			if currPtySession == ptySession {
 				ptySessions = append(ptySessions[:i], ptySessions[i+1:]...)
@@ -126,7 +160,7 @@ func main() {
 		}
 		session.Set("ptySessions", ptySessions)
 		session.Save()
-		c.Redirect(http.StatusTemporaryRedirect, "/")
+		ctx.Redirect(http.StatusTemporaryRedirect, "/")
 	})
 
 	engine.Run(":8080")

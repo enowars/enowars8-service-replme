@@ -4,19 +4,15 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"os"
-	"slices"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
-	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 
@@ -82,8 +78,8 @@ func (o *Orchestrator) CreateContainer(opts RunContainerOptions) (container.Crea
 		&container.HostConfig{
 			PortBindings: opts.Ports,
 		},
-		&network.NetworkingConfig{},
-		&v1.Platform{},
+		nil,
+		nil,
 		opts.ContainerName,
 	)
 }
@@ -98,13 +94,16 @@ func (o *Orchestrator) GetContainer(name string) *types.Container {
 	}
 
 	for _, c := range container {
-		if slices.Contains(c.Names, name) {
-			return &c
+		for _, v := range c.Names {
+			if v[1:] == name {
+				return &c
+			}
 		}
 	}
 
 	return nil
 }
 
-func (o *Orchestrator) StartContainer() {
+func (o *Orchestrator) StartContainer(id string) error {
+	return o.Client.ContainerStart(o.Context, id, container.StartOptions{ })
 }
