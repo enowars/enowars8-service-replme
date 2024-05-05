@@ -23,14 +23,10 @@ const config = {
       'node_modules',
     ],
     extensions: [ '.tsx', '.ts', '.js' ],
-    alias: {
-      common: path.resolve('./out/common'),
-      browser: path.resolve('./out/browser')
-    },
   },
   output: {
     filename: 'session.js',
-    path: path.resolve(__dirname, 'static')
+    path: path.resolve(__dirname, 'static', 'js')
   },
   mode: 'development'
 };

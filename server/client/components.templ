@@ -15,7 +15,7 @@ templ Layout() {
       <link href="/static/fontawesome/css/solid.css" rel="stylesheet" />
     </head>
 
-    <body class="w-full h-full">
+    <body class="w-full h-full font-mono">
       { children... }
     </body>
   </html>
@@ -33,7 +33,7 @@ templ Home(sessions []string, err string) {
   @Layout() {
     @CenterPanel() {
       <div class="text-3xl pb-6">cafédodo</div>
-      <div class="grid grid-cols-sessions gap-2 font-mono w-full items-center">
+      <div class="grid grid-cols-sessions gap-2 w-full items-center">
       for i, session := range sessions {
         <div>
           { session }
@@ -80,7 +80,7 @@ templ Home(sessions []string, err string) {
 
 templ Session(session string, port string) {
   @Layout() {
-    <script src="static/session.js" defer ></script>
+    <script src="static/js/session.js" defer ></script>
     <div class="flex flex-row space-x-5 absolute z-50 top-5 left-5">
       <a
         href="/"
