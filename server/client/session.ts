@@ -16,7 +16,6 @@ const port = urlParams.get('port');
 let serverURL = location.protocol + '//' + location.hostname + ':' + port
 let socketURL = protocol + location.hostname + ':' + port + '/terminals/';
 
-
 const terminal = new Terminal({
   allowProposedApi: true,
   fontFamily: '"DejaVuSansM Nerd Font", courier-new, courier, monospace',
@@ -98,6 +97,13 @@ async function connect() {
         const socket = new WebSocket(socketURL);
         socket.onopen = () => {
           terminal.loadAddon(new AttachAddon(socket));
+        };
+        window.onbeforeunload = function (e: any) {
+          if (e) {
+            e.returnValue = 'Leave site?';
+          }
+          // safari
+          return 'Leave site?';
         };
         break;
       }

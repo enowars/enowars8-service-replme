@@ -10,12 +10,15 @@ const express = require('express');
 const expressWs = require('express-ws');
 const os = require('os');
 const pty = require('node-pty');
+const cors = require('cors');
 
 /** Whether to use binary transport. */
 const USE_BINARY = os.platform() !== "win32";
 
 function startServer() {
   const app = express();
+  app.use(cors())
+
   const appWs = expressWs(app).app;
 
   const terminals = {};
