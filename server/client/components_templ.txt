@@ -1,5 +1,7 @@
-<!doctype html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><link href=\"/static/css/style.css\" rel=\"stylesheet\"><link href=\"/static/fontawesome/css/fontawesome.css\" rel=\"stylesheet\"><link href=\"/static/fontawesome/css/brands.css\" rel=\"stylesheet\"><link href=\"/static/fontawesome/css/solid.css\" rel=\"stylesheet\"></head><body class=\"flex flex-col w-full h-full px-32 pt-12 items-center\"><div class=\"flex flex-col w-full max-w-2xl space-y-2\">
-</div></body></html>
+<!doctype html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><link href=\"/static/css/style.css\" rel=\"stylesheet\"><link href=\"/static/css/xterm.css\" rel=\"stylesheet\"><link href=\"/static/fontawesome/css/fontawesome.css\" rel=\"stylesheet\"><link href=\"/static/fontawesome/css/brands.css\" rel=\"stylesheet\"><link href=\"/static/fontawesome/css/solid.css\" rel=\"stylesheet\"></head><body class=\"w-full h-full\">
+</body></html>
+<div class=\"flex flex-col w-full h-full px-32 pt-12 items-center\"><div class=\"flex flex-col w-full max-w-2xl space-y-2\">
+</div></div>
 <div class=\"text-3xl pb-6\">cafédodo</div><div class=\"grid grid-cols-sessions gap-2 font-mono w-full items-center\">
 <div>
 </div><form class=\"hidden\" action=\"
@@ -10,7 +12,7 @@
 </div><form action=\"/api/session/private\" method=\"get\" id=\"new_session_form\"></form><button type=\"submit\" form=\"new_session_form\" class=\"rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600\">New Session</button> 
 <div class=\"flex flex-row w-full rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white shadow-sm justify-center items-center space-x-2\"><i class=\"fa-solid fa-triangle-exclamation\"></i><div>
 </div></div>
-<div class=\"flex flex-row space-x-5\"><a href=\"/\" class=\"rounded bg-indigo-600 px-2 py-1 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600\"><i class=\"fa-solid fa-arrow-left\"></i></a><form class=\"hidden\" action=\"
+<script src=\"static/session.js\" defer></script> <div class=\"flex flex-row space-x-5 absolute z-50 top-5 left-5\"><a href=\"/\" class=\"rounded bg-indigo-600 px-2 py-1 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600\"><i class=\"fa-solid fa-arrow-left\"></i></a><form class=\"hidden\" action=\"
 \" method=\"get\" id=\"delete_session_form\"></form><button type=\"submit\" form=\"delete_session_form\" class=\"rounded bg-red-600 px-2 py-1 font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600\"><i class=\"fa-solid fa-trash-can\"></i></button><div class=\"text-mono text-xl\">
 </div><div class=\"text-mono text-xl\">
-</div></div>
+</div></div><div class=\"w-screen h-screen px-10 py-10 pt-20\"><div id=\"terminal\" class=\"w-full h-full\"></div></div>

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"cafedodo/components"
+	"cafedodo/client"
 	"cafedodo/lib"
 	"cafedodo/orchestrator"
 	"cafedodo/renderer"
@@ -35,8 +35,8 @@ func main() {
 		FallbackHtmlRenderer: ginHtmlRenderer,
 	}
 
-	engine.GET("/", func(c *gin.Context) {
-		session := sessions.Default(c)
+	engine.GET("/", func(ctx *gin.Context) {
+		session := sessions.Default(ctx)
 		var ptySessions []string
 		s := session.Get("ptySessions")
 		if s == nil {
@@ -44,13 +44,13 @@ func main() {
 		} else {
 			ptySessions = s.([]string)
 		}
-		e := c.Request.URL.Query().Get("error")
+		e := ctx.Request.URL.Query().Get("error")
 		fmt.Println(e);
-		c.HTML(http.StatusOK, "", components.Home(ptySessions, e))
+		ctx.HTML(http.StatusOK, "", client.Home(ptySessions, e))
 	})
 
-	engine.GET("/session/:ptySession", func(ctx *gin.Context) {
-		ptySession := ctx.Param("ptySession")
+	engine.GET("/session/prepare", func(ctx *gin.Context) {
+		ptySession := ctx.Request.URL.Query().Get("ptySession")
 		session := sessions.Default(ctx)
 		s := session.Get("ptySessions")
 		if s == nil || !slices.Contains(s.([]string), ptySession) {
@@ -74,9 +74,22 @@ func main() {
 				ctx.Redirect(http.StatusTemporaryRedirect, "/?error=no_port_for_container")
 				return
 			}
-			ctx.HTML(http.StatusOK, "", components.Session(ptySession, fmt.Sprint(c.Ports[0].PublicPort)))
+			ctx.Redirect(
+				http.StatusTemporaryRedirect,
+				fmt.Sprintf(
+					"/session?ptySession=%s&port=%d",
+					ptySession,
+					c.Ports[0].PublicPort,
+				),
+			)
 		}
 
+	})
+
+	engine.GET("/session", func(ctx *gin.Context) {
+		ptySession := ctx.Request.URL.Query().Get("ptySession")
+		port := ctx.Request.URL.Query().Get("port")
+		ctx.HTML(http.StatusOK, "", client.Session(ptySession, port))
 	})
 
 	engine.GET("/api/session/private", func(ctx *gin.Context) {
