@@ -1,6 +1,6 @@
-server/client/*_templ*
-server/tmp
-server/node_modules
-ptwhy/node_modules
-server/static/js
-server/static/css/style.css
+service/server/client/*_templ*
+service/server/tmp
+service/server/node_modules
+service/ptwhy/node_modules
+service/server/static/js
+service/server/static/css/style.css

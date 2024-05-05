@@ -1,20 +1,21 @@
 package main
 
 import (
-	"cafedodo/client"
-	"cafedodo/lib"
-	"cafedodo/orchestrator"
-	"cafedodo/renderer"
 	"fmt"
 	"log"
 	"net/http"
 	"slices"
 
+	"cafedodo/client"
+	"cafedodo/lib"
+	"cafedodo/orchestrator"
+	"cafedodo/renderer"
+
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
+	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/memstore"
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
