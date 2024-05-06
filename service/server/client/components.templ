@@ -1,7 +1,5 @@
 package client
 
-import "fmt"
-
 templ Layout() {
   <!doctype html>
   <html>
@@ -29,58 +27,48 @@ templ CenterPanel() {
   </div>
 }
 
-templ Home(sessions []string, err string) {
+templ Home() {
   @Layout() {
     @CenterPanel() {
+      <script src="static/js/index.js" defer />
       <div class="text-3xl pb-6">cafédodo</div>
-      <div class="grid grid-cols-sessions gap-2 w-full items-center">
-      for i, session := range sessions {
-        <div>
-          { session }
-        </div>
-        <form
-          class="hidden"
-          action={ templ.URL(fmt.Sprintf("/api/session/private/%s/delete", session)) }
-          method="get"
-          id={ string(fmt.Sprintf("delete_session_form_%d", i)) }
+      <form id="new_container_form" class="flex flex-col w-full space-y-2">
+        <input
+          class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight"
+          id="username"
+          name="username"
+          type="text"
+          placeholder="Username"
+          required
+        />
+        <input
+          class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight"
+          id="password"
+          name="password"
+          type="password"
+          placeholder="Password"
+          required
         />
         <button
           type="submit"
-          form={ string(fmt.Sprintf("delete_session_form_%d", i)) }
-          class="rounded bg-red-600 px-2 py-1 font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+          class="rounded bg-indigo-600 py-2 px-3 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
         >
-          <i class="fa-solid fa-trash-can" />
+          Login
         </button>
-        <a
-          href={ templ.URL(fmt.Sprintf("/session/prepare?ptySession=%s", session)) }
-          class="rounded bg-green-600 px-2 py-1 font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
-        >
-          <i class="fa-solid fa-arrow-right" />
-        </a>
-      }
-      </div>
-      
-      <form action="/api/session/private" method="get" id="new_session_form" />
-      <button
-        type="submit"
-        form="new_session_form"
-        class="rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-      >
-        New Session
-      </button>
-      if err != "" {
-        <div class="flex flex-row w-full rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white shadow-sm justify-center items-center space-x-2">
-          <i class="fa-solid fa-triangle-exclamation" />
-          <div>{ string(fmt.Sprintf("Error: %s", err)) }</div>
+        <div id="form_error_container" class="w-full hidden">
+          <div class="flex flex-row w-full rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white shadow-sm justify-center items-center space-x-2">
+            <i class="fa-solid fa-triangle-exclamation"/>
+            <div id="form_error_content" />
+          </div>
         </div>
-      }
+      </form>
     }
   }
 }
 
-templ Session(session string, port string) {
+templ Session() {
   @Layout() {
-    <script src="static/js/session.js" defer ></script>
+    <script src="/static/js/term.js" defer />
     <div class="flex flex-row space-x-5 absolute z-50 top-5 left-5">
       <a
         href="/"
@@ -88,21 +76,6 @@ templ Session(session string, port string) {
       >
         <i class="fa-solid fa-arrow-left" />
       </a>
-      <form
-        class="hidden"
-        action={ templ.URL(fmt.Sprintf("/api/session/private/%s/delete", session)) }
-        method="get"
-        id="delete_session_form"
-      />
-      <button
-        type="submit"
-        form="delete_session_form"
-        class="rounded bg-red-600 px-2 py-1 font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
-      >
-        <i class="fa-solid fa-trash-can" />
-      </button>
-      <div class="text-mono text-xl">{ session }</div>
-      <div class="text-mono text-xl">{ port }</div>
     </div>
     <div class="w-screen h-screen px-10 py-10 pt-20">
       <div id="terminal" class="w-full h-full" />

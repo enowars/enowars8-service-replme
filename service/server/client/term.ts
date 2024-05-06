@@ -3,6 +3,7 @@ import { AttachAddon } from "@xterm/addon-attach";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
+import { getPassword, sleep } from "./lib";
 
 const retry = 5;
 const delay = 1000;
@@ -10,8 +11,8 @@ const delay = 1000;
 let pid: string | undefined;
 const protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
 
-const urlParams = new URLSearchParams(window.location.search);
-const port = urlParams.get('port');
+const [username, port] = location.pathname.replace('/term/', '').split('/');
+const password = getPassword(username)
 
 let serverURL = location.protocol + '//' + location.hostname + ':' + port
 let socketURL = protocol + location.hostname + ':' + port + '/terminals/';
@@ -48,7 +49,6 @@ const canvas = new CanvasAddon();
 const clipboard = new ClipboardAddon();
 const fit = new FitAddon();
 
-
 terminal.loadAddon(canvas);
 terminal.loadAddon(clipboard);
 terminal.loadAddon(fit);
@@ -76,14 +76,6 @@ terminal.focus();
 
 resizeObserver.observe(terminalContainer!);
 
-async function sleep(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(null);
-    }, ms);
-  })
-}
-
 async function connect() {
   for (let i = 0; i < retry; i++) {
     try {
@@ -95,7 +87,11 @@ async function connect() {
         pid = await res.text();
         socketURL += pid;
         const socket = new WebSocket(socketURL);
-        socket.onopen = () => {
+        socket.onopen = async () => {
+          await sleep(100);
+          socket.send(`${username}\n`);
+          await sleep(100);
+          socket.send(`${password}\n`);
           terminal.loadAddon(new AttachAddon(socket));
         };
         window.onbeforeunload = function (e: any) {

@@ -4,9 +4,9 @@
     "target": "es2021",
     "rootDir": ".",
     "sourceMap": true,
-    "baseUrl": ".",
+    "baseUrl": "."
   },
   "include": [
-    "client/session.ts",
+    "client/*.ts"
   ]
 }

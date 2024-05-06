@@ -1,22 +1,48 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"log"
+	"hash/crc32"
+	"io"
 	"net/http"
-	"slices"
+	"time"
 
 	"cafedodo/client"
-	"cafedodo/lib"
 	"cafedodo/orchestrator"
 	"cafedodo/renderer"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/go-connections/nat"
 	"github.com/gin-gonic/gin"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/memstore"
 )
+
+type LoginRequest struct {
+	Username string `form:"username" json:"username" xml:"username" binding:"required"`
+	Password string `form:"password" json:"password" xml:"password" binding:"required"`
+}
+
+type SuccessResponse struct {
+	Success string `json:"success"`
+	Port uint16 `json:"port"`
+}
+
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+func SendCreateUserRequest(port uint16, request LoginRequest) (*http.Response, error) {
+	payload, err := json.Marshal(request)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return http.Post(
+		fmt.Sprintf("http://127.0.0.1:%d/user/create", port),
+		"application/json",
+		bytes.NewBuffer(payload),
+	)
+}
 
 func main() {
 	imageTag := "ptwhy"
@@ -28,153 +54,77 @@ func main() {
 
 	engine.Static("/static", "./static")
 
-	store := memstore.NewStore([]byte("secret"))
-	engine.Use(sessions.Sessions("session", store))
-
 	ginHtmlRenderer := engine.HTMLRender
 	engine.HTMLRender = &renderer.HTMLTemplRenderer {
 		FallbackHtmlRenderer: ginHtmlRenderer,
 	}
 
 	engine.GET("/", func(ctx *gin.Context) {
-		session := sessions.Default(ctx)
-		var ptySessions []string
-		s := session.Get("ptySessions")
-		if s == nil {
-			ptySessions = []string{}
-		} else {
-			ptySessions = s.([]string)
-		}
-		e := ctx.Request.URL.Query().Get("error")
-		fmt.Println(e);
-		ctx.HTML(http.StatusOK, "", client.Home(ptySessions, e))
+		ctx.HTML(http.StatusOK, "", client.Home())
 	})
 
-	engine.GET("/session/prepare", func(ctx *gin.Context) {
-		ptySession := ctx.Request.URL.Query().Get("ptySession")
-		session := sessions.Default(ctx)
-		s := session.Get("ptySessions")
-		if s == nil || !slices.Contains(s.([]string), ptySession) {
-			ctx.Redirect(http.StatusTemporaryRedirect, "/?error=session_not_found")
+	engine.GET("/term/:username/:port", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "", client.Session())
+	})
+
+	engine.POST("/api/term/private", func(ctx *gin.Context) {
+
+		var loginRequest LoginRequest
+		if err := ctx.ShouldBind(&loginRequest); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		c := o.GetContainer(ptySession)
-		if c == nil {
-			ctx.Redirect(http.StatusTemporaryRedirect, "/?error=container_not_found")
-			return
-		}
+		hash := crc32.ChecksumIEEE([]byte(loginRequest.Username))
+		name := fmt.Sprint(hash)
 
-		err := o.StartContainer(c.ID)
+		port, err := o.EnsureContainerStarted(
+			name,
+			loginRequest.Username,
+			loginRequest.Password,
+		)
+
 		if err != nil {
-			log.Print(err, " :failed to start container ", c.ID)
-			ctx.Redirect(http.StatusTemporaryRedirect, "/?error=could_not_start_container")
-		} else {
-			c = o.GetContainer(ptySession)
-			if len(c.Ports) == 0 {
-				ctx.Redirect(http.StatusTemporaryRedirect, "/?error=no_port_for_container")
-				return
-			}
-			ctx.Redirect(
-				http.StatusTemporaryRedirect,
-				fmt.Sprintf(
-					"/session?ptySession=%s&port=%d",
-					ptySession,
-					c.Ports[0].PublicPort,
-				),
-			)
-		}
-
-	})
-
-	engine.GET("/session", func(ctx *gin.Context) {
-		ptySession := ctx.Request.URL.Query().Get("ptySession")
-		port := ctx.Request.URL.Query().Get("port")
-		ctx.HTML(http.StatusOK, "", client.Session(ptySession, port))
-	})
-
-	engine.GET("/api/session/private", func(ctx *gin.Context) {
-		session := sessions.Default(ctx)
-		var ptySessions []string
-		s := session.Get("ptySessions")
-		ptySession := lib.RandomString(32)
-		if s == nil {
-			ptySessions = []string{}
-		} else {
-			ptySessions = s.([]string)
-		}
-
-		c := o.GetContainer(ptySession)
-
-		if c != nil {
-			log.Print(c.ID, ": container exists")
-		} else {
-			response, err := o.CreateContainer(orchestrator.RunContainerOptions {
-				ImageTag: "ptwhy",
-				ContainerName: ptySession,
-				Ports: nat.PortMap {
-					nat.Port("3000/tcp"): []nat.PortBinding {
-						{
-							HostIP: "127.0.0.1",
-							HostPort: "0",
-						},
-					},
-				},
+			ctx.JSON(400, ErrorResponse {
+				Error: err.Error(),
 			})
-			log.Print(response.ID, ": container created")
-			if err != nil {
-				log.Print(err, ": container creation failed")
-				ctx.Redirect(http.StatusMovedPermanently, "/?error=container_creation_failed")
-			} 
-		}
-		
-		ptySessions = append(ptySessions, ptySession)
-		session.Set("ptySessions", ptySessions)
-		session.Save()
-
-		ctx.Redirect(http.StatusTemporaryRedirect, "/")
-	})
-
-	engine.GET("/api/session/private/:ptySession/delete", func(ctx *gin.Context) {
-		ptySession := ctx.Param("ptySession")
-		session := sessions.Default(ctx)
-		var ptySessions []string
-		s := session.Get("ptySessions")
-		if s == nil {
-			ptySessions = []string{}
-		} else {
-			ptySessions = s.([]string)
+			return
 		}
 
-		c := o.GetContainer(ptySession)
+		var response *http.Response
 
-		if c != nil {
-			err := o.Client.ContainerKill(o.Context, c.ID, "")
-
-			if err != nil {
-				log.Print(err);
-				ctx.Redirect(http.StatusTemporaryRedirect, "/?error=could_not_kill_container")
-				return
-			}
-
-			err = o.Client.ContainerRemove(o.Context, c.ID, container.RemoveOptions{})
-
-			if err != nil {
-				log.Print(err);
-				ctx.Redirect(http.StatusTemporaryRedirect, "/?error=could_not_remove_container")
-				return
-			}
-		}
-
-		for i, currPtySession := range ptySessions {
-			if currPtySession == ptySession {
-				ptySessions = append(ptySessions[:i], ptySessions[i+1:]...)
+		for range 5 {
+			response, err = SendCreateUserRequest(*port, loginRequest)
+			if err == nil {
 				break
 			}
+			time.Sleep(500 * time.Millisecond)
 		}
-		session.Set("ptySessions", ptySessions)
-		session.Save()
-		ctx.Redirect(http.StatusTemporaryRedirect, "/")
+
+		if err != nil {
+			ctx.JSON(400, ErrorResponse {
+				Error: err.Error(),
+			})
+			return
+		}
+
+		if response.StatusCode >= 400 {
+			payload, err := io.ReadAll(response.Body)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, ErrorResponse {
+					Error: "Container communication failed",
+				})
+				return
+			}
+			ctx.Data(response.StatusCode, "application/json", payload)
+			return
+		}
+
+		ctx.JSON(response.StatusCode, SuccessResponse {
+			Success: "Success",
+			Port: *port,
+		})
+		
 	})
 
 	engine.Run(":8080")

@@ -1,7 +1,10 @@
 const path = require('path');
 
 const config = {
-  entry: path.resolve(__dirname, 'client', 'session.ts'),
+  entry: {
+    index: path.resolve(__dirname, 'client', 'index.ts'),
+    term: path.resolve(__dirname, 'client', 'term.ts'),
+  },
   devtool: 'inline-source-map',
   module: {
     rules: [
@@ -25,7 +28,7 @@ const config = {
     extensions: [ '.tsx', '.ts', '.js' ],
   },
   output: {
-    filename: 'session.js',
+    filename: '[name].js',
     path: path.resolve(__dirname, 'static', 'js')
   },
   mode: 'development'

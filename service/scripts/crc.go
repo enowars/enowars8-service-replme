@@ -26,6 +26,7 @@ func main() {
 	max := 16
 
 	str := RandomString(32)
+	// str := "test"
 	u := []byte(str)
 	goal := crc32.ChecksumIEEE(u)
 	fmt.Printf("[Goal] : %s (CRC: %d)\n", string(u), goal)
