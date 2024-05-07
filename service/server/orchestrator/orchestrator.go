@@ -4,8 +4,10 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"log"
+	"net"
 	"os"
 
 	"github.com/docker/docker/api/types"
@@ -19,6 +21,7 @@ import (
 type Orchestrator struct {
 	Context context.Context
 	Client *client.Client
+	HostIP string
 }
 
 type RunContainerOptions struct {
@@ -29,15 +32,31 @@ type RunContainerOptions struct {
 
 func Instance() Orchestrator {
 	ctx := context.Background()
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+
+	opts := []client.Opt{
+		client.FromEnv,
+		client.WithAPIVersionNegotiation(),
+	}
+
+	ip := "127.0.0.1"
+
+	ips, err := net.LookupIP("dind")
+	if err == nil {
+		ip = ips[0].String()
+		opts = append(opts, client.WithHost(fmt.Sprintf("https://%s:2376", ip)))
+	}
+	cli, err := client.NewClientWithOpts(opts...)
+
 	if err != nil {
 		panic(err)
 	}
+
 	defer cli.Close()
 
 	return Orchestrator{
 		Context: ctx,
 		Client: cli,
+		HostIP: ip,
 	}
 }
 
@@ -97,7 +116,7 @@ func (o *Orchestrator) GetContainer(name string) (*types.Container, *types.Conta
 		for _, v := range c.Names {
 			if v[1:] == name {
 				information, err := o.Client.ContainerInspect(o.Context, c.ID)
-				return &c, &information, (err != nil && information.State.Running)
+				return &c, &information, (err == nil && information.State.Running)
 			}
 		}
 	}
@@ -109,29 +128,42 @@ func (o *Orchestrator) StartContainer(id string) error {
 	return o.Client.ContainerStart(o.Context, id, container.StartOptions{ })
 }
 
-func (o *Orchestrator) GetContainerPort(id string) (*uint16, error) {
+func (o *Orchestrator) GetContainerAddress(id string) (*string, *uint16, error) {
 	container, err := o.Client.ContainerList(o.Context, container.ListOptions {
 		All: true,
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	for _, c := range container {
 		if c.ID == id {
 
 			if len(c.Ports) == 0 {
-				return nil, types.ErrorResponse{
+				return nil, nil, types.ErrorResponse{
 					Message: "Container has no exposed port",
 				}
 			}
 
-			return &c.Ports[0].PublicPort, nil
+			if len(c.NetworkSettings.Networks) == 0 {
+				return nil, nil, types.ErrorResponse{
+					Message: "Container has no network",
+				}
+			}
+
+			var ipAddress string
+
+			for _, network := range c.NetworkSettings.Networks {
+				ipAddress = network.IPAddress
+				break
+			}
+
+			return &ipAddress, &c.Ports[0].PublicPort, nil
 		}
 	}
 
-	return nil, types.ErrorResponse{
+	return nil, nil, types.ErrorResponse{
 		Message: "Container not found",
 	}
 }
@@ -140,7 +172,7 @@ func (o *Orchestrator) EnsureContainerStarted(
 	name string,
 	username string,
 	password string,
-) (*uint16, error) {
+) (*string, *uint16, error) {
 	var id string
 
 	container, _, running := o.GetContainer(name)
@@ -154,7 +186,7 @@ func (o *Orchestrator) EnsureContainerStarted(
 			Ports: nat.PortMap {
 				nat.Port("3000/tcp"): []nat.PortBinding {
 					{
-						HostIP: "127.0.0.1",
+						HostIP: o.HostIP,
 						HostPort: "0",
 					},
 				},
@@ -162,7 +194,7 @@ func (o *Orchestrator) EnsureContainerStarted(
 		})
 
 		if err != nil {
-			return nil, types.ErrorResponse {
+			return nil, nil, types.ErrorResponse {
 				Message: "Container creation failed",
 			}
 		}
@@ -174,17 +206,17 @@ func (o *Orchestrator) EnsureContainerStarted(
 	if !running {
 		err := o.StartContainer(id)
 		if err != nil {
-			return nil, types.ErrorResponse {
+			return nil, nil, types.ErrorResponse {
 				Message: "Container start failed",
 			}
 		}
 	}
 
-	port, err := o.GetContainerPort(id)
+	ip, port, err := o.GetContainerAddress(id)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return port, nil
+	return ip, port, nil
 }

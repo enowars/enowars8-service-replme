@@ -1,7 +1,8 @@
+service/server/cafedodo
 service/server/tmp
 service/server/node_modules
 service/server/client/*_templ*
 service/server/static/js
 service/server/static/css/style.css
-service/ptwhy/node_modules
-service/ptwhy/out
+service/server/ptwhy/node_modules
+service/server/ptwhy/out

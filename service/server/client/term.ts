@@ -14,8 +14,7 @@ const protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
 const [username, port] = location.pathname.replace('/term/', '').split('/');
 const password = getPassword(username)
 
-let serverURL = location.protocol + '//' + location.hostname + ':' + port
-let socketURL = protocol + location.hostname + ':' + port + '/terminals/';
+let socketURL = protocol + location.host + '/ws/ptwhy/terminals/' + port + '/';
 
 const terminal = new Terminal({
   allowProposedApi: true,
@@ -59,9 +58,21 @@ terminal.onResize((size: { cols: number, rows: number }) => {
   }
   const cols = size.cols;
   const rows = size.rows;
-  const url = serverURL + '/terminals/' + pid + '/size?cols=' + cols + '&rows=' + rows;
 
-  fetch(url, { method: 'POST' });
+  fetch(
+    `/api/ptwhy/terminals/${pid}/size`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + btoa(username + ":" + password),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        cols,
+        rows
+      })
+    }
+  );
 });
 
 const resizeObserver = new ResizeObserver(() => {
@@ -80,8 +91,18 @@ async function connect() {
   for (let i = 0; i < retry; i++) {
     try {
       const res = await fetch(
-        serverURL + '/terminals?cols=' + terminal.cols + '&rows=' + terminal.rows,
-        { method: 'POST' }
+        '/api/ptwhy/terminals',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Basic ' + btoa(username + ":" + password),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            cols: terminal.cols,
+            rows: terminal.rows
+          })
+        }
       )
       if (res.ok) {
         pid = await res.text();

@@ -1,7 +1,10 @@
 {
   "scripts": {
     "build": "webpack --config webpack.config.js",
-    "tailwind-watch": "tailwindcss -i client/style.css -o static/css/style.css -pw"
+    "tailwind-build": "tailwindcss -i client/style.css -o static/css/style.css",
+    "tailwind-watch": "tailwindcss -i client/style.css -o static/css/style.css -pw",
+    "templ-build": "templ generate -v",
+    "templ-watch": "templ generate -v -watch"
   },
   "dependencies": {
     "@xterm/addon-attach": "^0.11.0",

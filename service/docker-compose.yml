@@ -1,0 +1,28 @@
+services:
+  backend:
+    container_name: cafedodo
+    depends_on:
+      - dind
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    volumes:
+      - docker-cert:/cert
+    environment:
+      - DOCKER_CERT_PATH=/cert/client
+      - DOCKER_TLS_VERIFY=true
+    ports:
+      - 6969:6969
+    restart: "unless-stopped"
+
+  dind:
+    image: docker:dind
+    privileged: true
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+    restart: "unless-stopped"
+    volumes:
+      - docker-cert:/certs
+
+volumes:
+  docker-cert:

@@ -9,6 +9,11 @@ import cors from "cors";
 
 import z from "zod";
 
+const LoginUserScheme = z.object({
+  username: z.string().min(4).max(64).regex(/^[a-zA-Z0-9]*$/),
+  password: z.string().min(4).max(64).regex(/^[a-zA-Z0-9]*$/)
+});
+
 const CreateUserScheme = z.object({
   username: z.string().min(4).max(64).regex(/^[a-zA-Z0-9]*$/),
   password: z.string().min(4).max(64).regex(/^[a-zA-Z0-9]*$/)
@@ -25,6 +30,55 @@ function main() {
   const unsentOutput = {};
   const temporaryDisposable = {};
 
+  app.post('/user/login', (req, res) => {
+    let schema = LoginUserScheme.safeParse(req.body);
+    if (!schema.success) {
+      res.status(400)
+      res.send({ error: "Invalid input" });
+      return;
+    }
+    let body = schema.data;
+
+    const shadow = fs.readFileSync('/etc/shadow', 'utf8').split('\n');
+
+    const user = shadow.find((user) => {
+      return user.startsWith(body.username)
+    })
+
+    if (user) {
+      const [, hash] = user.split(':')
+      const _hash = hash.split('$')
+      if (_hash.length < 4) {
+        res.status(403)
+        res.send({ error: "Forbidden" })
+        return;
+      }
+      let type: string, salt: string, pw: string = '';
+      if (hash[1] === 'y') {
+        res.status(403)
+        res.send({ error: "Forbidden" })
+        return;
+      } else {
+        [, type, salt, pw] = _hash;
+      }
+
+      const buf = child_process.execSync(`openssl passwd -${type} -salt ${salt} ${body.password}`)
+      const result = buf.toString('utf8').trim()
+      if (result === hash) {
+        res.status(200);
+        res.send({ success: "Ok" });
+        return;
+      } else {
+        res.status(401);
+        res.send({ error: "Invalid credentials" });
+        return;
+      }
+    }
+
+    res.status(404);
+    res.send({ error: "Not found" });
+  });
+
   app.post('/user/create', (req, res) => {
 
     let schema = CreateUserScheme.safeParse(req.body);
@@ -33,9 +87,6 @@ function main() {
       res.send({ error: "Invalid input" });
       return;
     }
-
-    console.log("here")
-
     let body = schema.data;
 
     const shadow = fs.readFileSync('/etc/shadow', 'utf8').split('\n');

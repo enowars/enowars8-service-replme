@@ -1,13 +1,14 @@
 module cafedodo
 
-go 1.22.2
+go 1.21.0
 
 require (
 	github.com/a-h/templ v0.2.663
 	github.com/docker/docker v26.1.1+incompatible
 	github.com/docker/go-connections v0.5.0
-	github.com/gin-contrib/sessions v1.0.0
+	github.com/elazarl/goproxy v0.0.0-20231117061959-7cc037d33fb5
 	github.com/gin-gonic/gin v1.9.1
+	github.com/gorilla/websocket v1.5.1
 )
 
 require (
@@ -31,9 +32,6 @@ require (
 	github.com/go-playground/validator/v10 v10.20.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/gorilla/context v1.1.2 // indirect
-	github.com/gorilla/securecookie v1.1.2 // indirect
-	github.com/gorilla/sessions v1.2.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
