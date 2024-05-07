@@ -5,7 +5,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN rm -rf node_modules/ tmp/ ptwhy/node_modules/ ptwhy/out/
+# RUN rm -rf node_modules/ tmp/ ptwhy/node_modules/ ptwhy/out/
 
 RUN npm i
 RUN npm run build

@@ -1,2 +1,8 @@
-node_modules/
+cafedodo
 tmp/
+node_modules/
+client/*_templ*
+static/js
+static/css/style.css
+ptwhy/node_modules/
+ptwhy/out/
