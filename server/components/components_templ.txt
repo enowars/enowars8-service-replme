@@ -1,4 +1,0 @@
-<html><h1>cafédodo</h1><ul>
-<li>
-</li>
-</ul><form action=\"/api/session/private\" method=\"get\" id=\"new_session_form\"></form><button type=\"submit\" form=\"new_session_form\">New Session</button></html>
