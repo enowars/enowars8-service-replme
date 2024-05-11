@@ -1,10 +1,6 @@
 const path = require('path');
 
 const config = {
-  entry: {
-    index: path.resolve(__dirname, 'client', 'index.ts'),
-    term: path.resolve(__dirname, 'client', 'term.ts'),
-  },
   devtool: 'inline-source-map',
   module: {
     rules: [
@@ -29,8 +25,8 @@ const config = {
   },
   output: {
     filename: '[name].js',
-    path: path.resolve(__dirname, 'static', 'js')
+    path: path.resolve(__dirname)
   },
-  mode: 'development'
+  mode: 'production'
 };
 module.exports = config;

@@ -4,18 +4,19 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"hash/crc32"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"path"
 	"strings"
 	"time"
 
-	"cafedodo/client"
 	"cafedodo/orchestrator"
-	"cafedodo/renderer"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -89,10 +90,24 @@ func SendUpdateTermSizeRequest(ip string, port uint16, pid string, request Updat
 }
 
 func main() {
+
+	var dist string
+	var image string
+
+	flag.StringVar(&dist, "d", "", "Dist directory (required)")
+	flag.StringVar(&image, "i", "", "Image directory (required)")
+
+	flag.Parse()
+
+	if dist == "" || image == "" {
+		flag.Usage()
+		os.Exit(1)
+	}
+
 	imageTag := "ptwhy"
 
 	o := orchestrator.Instance()
-	o.BuildImage("./ptwhy/", imageTag)
+	o.BuildImage(image, imageTag)
 
 	var upgrader = websocket.Upgrader{
 		// ReadBufferSize:  1024,
@@ -104,7 +119,16 @@ func main() {
 
 	engine := gin.Default()
 
-	engine.Static("/static", "./static")
+	engine.Static("/static", path.Join(dist, "static"))
+	engine.LoadHTMLGlob(path.Join(dist, "*.html"))
+
+	engine.GET("/", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "index.html", gin.H{})
+	})
+
+	engine.GET("/term/:username/:port", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "term.html", gin.H{})
+	})
 
 	term := engine.Group("/api/ptwhy", func(ctx *gin.Context) {
 		authHeader := ctx.Request.Header["Authorization"]
@@ -218,19 +242,6 @@ func main() {
 
 		ctx.Set("port", *port)
 		ctx.Next()
-	})
-
-	ginHtmlRenderer := engine.HTMLRender
-	engine.HTMLRender = &renderer.HTMLTemplRenderer {
-		FallbackHtmlRenderer: ginHtmlRenderer,
-	}
-
-	engine.GET("/", func(ctx *gin.Context) {
-		ctx.HTML(http.StatusOK, "", client.Home())
-	})
-
-	engine.GET("/term/:username/:port", func(ctx *gin.Context) {
-		ctx.HTML(http.StatusOK, "", client.Session())
 	})
 
 	engine.POST("/api/term/private", func(ctx *gin.Context) {

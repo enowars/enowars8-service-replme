@@ -1,18 +1,13 @@
 {
   description = "cafédodo";
 
-  inputs = {
-    templ.url = "github:a-h/templ?ref=v0.2.663";
-  };
-
-  outputs = { self, nixpkgs, ... }@inputs:
+  outputs = { self, nixpkgs, ... }:
     let
       lastModifiedDate = self.lastModifiedDate or self.lastModified or "19700101";
       version = builtins.substring 0 8 lastModifiedDate;
       supportedSystems = [ "x86_64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
       nixpkgsFor = forAllSystems (system: import nixpkgs { inherit system; });
-      templ = system: inputs.templ.packages.${system}.templ;
     in
     {
 
@@ -24,7 +19,7 @@
           cafedodo = pkgs.buildGoModule {
             pname = "cafedodo";
             inherit version;
-            src = ./server;
+            src = ./service/server;
 
             # This hash locks the dependencies of this package. It is
             # necessary because of how Go requires network access to resolve
@@ -51,17 +46,12 @@
               gopls
               gotools
               go-tools
-              air
-              (templ system)
               vscode-langservers-extracted
               tailwindcss-language-server
             ];
           };
         });
 
-      # The default package for 'nix build'. This makes sense if the
-      # flake provides only one package or there is a clear "main"
-      # package.
       defaultPackage = forAllSystems (system: self.packages.${system}.cafedodo);
     };
 }

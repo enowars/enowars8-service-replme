@@ -1,0 +1,38 @@
+<layout src="layout/root-layout.html">
+  <layout src="layout/panel-layout.html">
+    <script src="/static/js/index.js" defer></script>
+    <div class="text-3xl pb-6">cafédodo</div>
+    <form id="new_container_form" class="flex flex-col w-full space-y-2">
+      <input
+        class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight"
+        id="username"
+        name="username"
+        type="text"
+        placeholder="Username"
+        required
+      />
+      <input
+        class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight"
+        id="password"
+        name="password"
+        type="password"
+        placeholder="Password"
+        required
+      />
+      <button
+        type="submit"
+        class="rounded bg-indigo-600 py-2 px-3 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+      >
+        Login
+      </button>
+      <div id="form_error_container" class="w-full hidden">
+        <div
+          class="flex flex-row w-full rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white shadow-sm justify-center items-center space-x-2"
+        >
+          <i class="fa-solid fa-triangle-exclamation" />
+          <div id="form_error_content" />
+        </div>
+      </div>
+    </form>
+  </layout>
+</layout>

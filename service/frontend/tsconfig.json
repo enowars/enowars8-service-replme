@@ -3,13 +3,10 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "es2021",
-    "rootDir": "src",
-    "baseUrl": ".",
     "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "outDir": "out"
+    "esModuleInterop": true
   },
   "include": [
-    "src/server.ts"
+    "src/**/*.ts"
   ]
 }
