@@ -1,7 +1,7 @@
 import { RequestHandler } from "express";
-import UserService from "service/user-service";
-import { UserServiceError } from "types/error";
-import { CreateUserScheme, LoginUserScheme } from "types/request";
+import UserService from "../service/user-service";
+import { UserServiceError } from "../types/error";
+import { CreateUserScheme, LoginUserScheme } from "../types/request";
 
 const login: RequestHandler = (req, res) => {
   let schema = LoginUserScheme.safeParse(req.body);

@@ -1,4 +1,4 @@
-import init from "server";
+import init from "./server";
 
 init();
 

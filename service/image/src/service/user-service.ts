@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import child_process from "node:child_process";
 
-import { UserServiceError } from "types/error";
+import { UserServiceError } from "../types/error";
 
 interface UserEntry {
   hash: string;

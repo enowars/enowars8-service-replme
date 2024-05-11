@@ -2,8 +2,8 @@ import express from "express";
 import expressWs from "express-ws";
 import cors from "cors";
 
-import UserController from "controller/user-controller";
-import TermController from "controller/term-controller";
+import UserController from "../controller/user-controller";
+import TermController from "../controller/term-controller";
 
 export default function createExpressApp() {
   const app = express();
