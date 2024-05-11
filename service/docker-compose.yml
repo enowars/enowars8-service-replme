@@ -1,10 +1,9 @@
 services:
   backend:
-    container_name: cafedodo
+    container_name: cafedodo-backend
     depends_on:
       - dind
     build:
-      context: ./server
       dockerfile: Dockerfile
     volumes:
       - docker-cert:/cert
@@ -17,6 +16,7 @@ services:
 
   dind:
     image: docker:dind
+    container_name: cafedodo-dind
     privileged: true
     environment:
       - DOCKER_TLS_CERTDIR=/certs

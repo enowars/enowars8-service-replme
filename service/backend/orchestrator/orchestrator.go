@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -65,7 +66,17 @@ func (o *Orchestrator) BuildImage(path string, tag string) {
 	tw := tar.NewWriter(&buf)
 	defer tw.Close()
 
-	tar, err := archive.TarWithOptions(path, &archive.TarOptions{})
+	ExcludePatterns := []string{}
+
+	exclude, err := os.ReadFile(path + ".dockerignore")
+
+	if err == nil {
+		ExcludePatterns = strings.Split(string(exclude), "\n")
+	}
+
+	tar, err := archive.TarWithOptions(path, &archive.TarOptions{
+		ExcludePatterns: ExcludePatterns,
+	})
 
 	if err != nil {
 		log.Fatal(err, " :unable to create tar")

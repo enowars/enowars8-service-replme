@@ -3,12 +3,11 @@ module cafedodo
 go 1.21.0
 
 require (
-	github.com/a-h/templ v0.2.663
 	github.com/docker/docker v26.1.1+incompatible
 	github.com/docker/go-connections v0.5.0
-	github.com/elazarl/goproxy v0.0.0-20231117061959-7cc037d33fb5
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gorilla/websocket v1.5.1
+	github.com/urfave/cli/v3 v3.0.0-alpha9
 )
 
 require (
@@ -53,6 +52,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
+	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.51.0 // indirect
 	go.opentelemetry.io/otel v1.26.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.26.0 // indirect
