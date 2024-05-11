@@ -109,6 +109,13 @@ async function connect() {
         socketURL += pid;
         const socket = new WebSocket(socketURL);
         socket.onopen = async () => {
+          document.addEventListener('keydown', (event) => {
+            if (event.code === "Escape") {
+              event.preventDefault();
+              socket.send('\x1B');
+              terminal.focus();
+            }
+          });
           await sleep(100);
           socket.send(`${username}\n`);
           await sleep(100);
