@@ -14,7 +14,7 @@ const protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
 const [username, port] = location.pathname.replace('/term/', '').split('/');
 const password = getPassword(username)
 
-let socketURL = protocol + location.host + '/ws/ptwhy/terminals/' + port + '/';
+let socketURL = protocol + location.host + '/ws/terminal/' + port + '/';
 
 const terminal = new Terminal({
   allowProposedApi: true,

@@ -1,4 +1,4 @@
-package orchestrator
+package service
 
 import (
 	"archive/tar"
@@ -10,28 +10,24 @@ import (
 	"net"
 	"os"
 	"strings"
+	"path"
 
-	"github.com/docker/docker/api/types"
+	"cafedodo/types"
+
+	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
 )
 
-
-type Orchestrator struct {
+type DockerService struct {
 	Context context.Context
-	Client *client.Client
-	HostIP string
+	Client  *client.Client
+	HostIP  string
 }
 
-type RunContainerOptions struct {
-	ImageTag string
-	ContainerName string
-	Ports nat.PortMap
-}
-
-func Instance() Orchestrator {
+func Docker() DockerService {
 	ctx := context.Background()
 
 	opts := []client.Opt{
@@ -46,35 +42,36 @@ func Instance() Orchestrator {
 		ip = ips[0].String()
 		opts = append(opts, client.WithHost(fmt.Sprintf("https://%s:2376", ip)))
 	}
+
 	cli, err := client.NewClientWithOpts(opts...)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	defer cli.Close()
 
-	return Orchestrator{
+	return DockerService{
 		Context: ctx,
-		Client: cli,
-		HostIP: ip,
+		Client:  cli,
+		HostIP:  ip,
 	}
 }
 
-func (o *Orchestrator) BuildImage(path string, tag string) {
+func (docker *DockerService) BuildImage(imageDir string, tag string) {
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
 	defer tw.Close()
 
 	ExcludePatterns := []string{}
 
-	exclude, err := os.ReadFile(path + ".dockerignore")
+	exclude, err := os.ReadFile(path.Join(imageDir, ".dockerignore"))
 
 	if err == nil {
 		ExcludePatterns = strings.Split(string(exclude), "\n")
 	}
 
-	tar, err := archive.TarWithOptions(path, &archive.TarOptions{
+	tar, err := archive.TarWithOptions(imageDir, &archive.TarOptions{
 		ExcludePatterns: ExcludePatterns,
 	})
 
@@ -82,13 +79,13 @@ func (o *Orchestrator) BuildImage(path string, tag string) {
 		log.Fatal(err, " :unable to create tar")
 	}
 
-	opts := types.ImageBuildOptions{
-		Dockerfile:  "Dockerfile",
-		Tags:        []string { tag },
-		Remove:      true,
+	opts := dockerTypes.ImageBuildOptions{
+		Dockerfile: "Dockerfile",
+		Tags:       []string{tag},
+		Remove:     true,
 	}
 
-	res, err := o.Client.ImageBuild(o.Context, tar, opts)
+	res, err := docker.Client.ImageBuild(docker.Context, tar, opts)
 
 	if err != nil {
 		log.Fatal(err, " :unable to build docker image")
@@ -102,9 +99,9 @@ func (o *Orchestrator) BuildImage(path string, tag string) {
 	}
 }
 
-func (o *Orchestrator) CreateContainer(opts RunContainerOptions) (container.CreateResponse, error) {
-	return o.Client.ContainerCreate(
-		o.Context, &container.Config { Image: opts.ImageTag },
+func (docker *DockerService) CreateContainer(opts types.RunContainerOptions) (container.CreateResponse, error) {
+	return docker.Client.ContainerCreate(
+		docker.Context, &container.Config{Image: opts.ImageTag},
 		&container.HostConfig{
 			PortBindings: opts.Ports,
 		},
@@ -114,8 +111,12 @@ func (o *Orchestrator) CreateContainer(opts RunContainerOptions) (container.Crea
 	)
 }
 
-func (o *Orchestrator) GetContainer(name string) (*types.Container, *types.ContainerJSON, bool) {
-	container, err := o.Client.ContainerList(o.Context, container.ListOptions {
+func (docker *DockerService) GetContainer(name string) (
+	*dockerTypes.Container,
+	*dockerTypes.ContainerJSON,
+	bool,
+) {
+	container, err := docker.Client.ContainerList(docker.Context, container.ListOptions{
 		All: true,
 	})
 
@@ -126,7 +127,7 @@ func (o *Orchestrator) GetContainer(name string) (*types.Container, *types.Conta
 	for _, c := range container {
 		for _, v := range c.Names {
 			if v[1:] == name {
-				information, err := o.Client.ContainerInspect(o.Context, c.ID)
+				information, err := docker.Client.ContainerInspect(docker.Context, c.ID)
 				return &c, &information, (err == nil && information.State.Running)
 			}
 		}
@@ -135,12 +136,12 @@ func (o *Orchestrator) GetContainer(name string) (*types.Container, *types.Conta
 	return nil, nil, false
 }
 
-func (o *Orchestrator) StartContainer(id string) error {
-	return o.Client.ContainerStart(o.Context, id, container.StartOptions{ })
+func (docker *DockerService) StartContainer(id string) error {
+	return docker.Client.ContainerStart(docker.Context, id, container.StartOptions{})
 }
 
-func (o *Orchestrator) GetContainerAddress(id string) (*string, *uint16, error) {
-	container, err := o.Client.ContainerList(o.Context, container.ListOptions {
+func (docker *DockerService) GetContainerAddress(id string) (*string, *uint16, error) {
+	container, err := docker.Client.ContainerList(docker.Context, container.ListOptions{
 		All: true,
 	})
 
@@ -152,13 +153,13 @@ func (o *Orchestrator) GetContainerAddress(id string) (*string, *uint16, error) 
 		if c.ID == id {
 
 			if len(c.Ports) == 0 {
-				return nil, nil, types.ErrorResponse{
+				return nil, nil, dockerTypes.ErrorResponse{
 					Message: "Container has no exposed port",
 				}
 			}
 
 			if len(c.NetworkSettings.Networks) == 0 {
-				return nil, nil, types.ErrorResponse{
+				return nil, nil, dockerTypes.ErrorResponse{
 					Message: "Container has no network",
 				}
 			}
@@ -174,30 +175,30 @@ func (o *Orchestrator) GetContainerAddress(id string) (*string, *uint16, error) 
 		}
 	}
 
-	return nil, nil, types.ErrorResponse{
+	return nil, nil, dockerTypes.ErrorResponse{
 		Message: "Container not found",
 	}
 }
 
-func (o *Orchestrator) EnsureContainerStarted(
+func (docker *DockerService) EnsureContainerStarted(
 	name string,
 	username string,
 	password string,
 ) (*string, *uint16, error) {
 	var id string
 
-	container, _, running := o.GetContainer(name)
+	container, _, running := docker.GetContainer(name)
 
 	if container != nil {
 		id = container.ID
 	} else {
-		response, err := o.CreateContainer(RunContainerOptions {
-			ImageTag: "ptwhy",
+		response, err := docker.CreateContainer(types.RunContainerOptions{
+			ImageTag:      "ptwhy",
 			ContainerName: name,
-			Ports: nat.PortMap {
-				nat.Port("3000/tcp"): []nat.PortBinding {
+			Ports: nat.PortMap{
+				nat.Port("3000/tcp"): []nat.PortBinding{
 					{
-						HostIP: o.HostIP,
+						HostIP:   docker.HostIP,
 						HostPort: "0",
 					},
 				},
@@ -205,7 +206,7 @@ func (o *Orchestrator) EnsureContainerStarted(
 		})
 
 		if err != nil {
-			return nil, nil, types.ErrorResponse {
+			return nil, nil, dockerTypes.ErrorResponse{
 				Message: "Container creation failed",
 			}
 		}
@@ -215,15 +216,15 @@ func (o *Orchestrator) EnsureContainerStarted(
 	}
 
 	if !running {
-		err := o.StartContainer(id)
+		err := docker.StartContainer(id)
 		if err != nil {
-			return nil, nil, types.ErrorResponse {
+			return nil, nil, dockerTypes.ErrorResponse{
 				Message: "Container start failed",
 			}
 		}
 	}
 
-	ip, port, err := o.GetContainerAddress(id)
+	ip, port, err := docker.GetContainerAddress(id)
 
 	if err != nil {
 		return nil, nil, err
