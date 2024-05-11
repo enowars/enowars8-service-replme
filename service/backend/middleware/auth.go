@@ -13,14 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AuthenticationMiddleware struct {
-}
-
-func NewAuthenticationMiddleware() AuthenticationMiddleware {
-
-	return AuthenticationMiddleware{}
-}
-
 func AuthMiddleware(docker *service.DockerService) gin.HandlerFunc {
 
 	return func(ctx *gin.Context) {

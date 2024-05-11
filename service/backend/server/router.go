@@ -5,8 +5,8 @@ import (
 	"path"
 
 	"cafedodo/controller"
-	"cafedodo/service"
 	"cafedodo/middleware"
+	"cafedodo/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,12 +28,27 @@ func NewRouter(docker *service.DockerService, dist string) *gin.Engine {
 		ctx.HTML(http.StatusOK, "term.html", gin.H{})
 	})
 
-	engine.POST("/api/term/private", terminalController.CreateUser)
-	engine.GET("/ws/terminal/:port/:pid", terminalController.CreateWebsocketProxy)
+	engine.POST(
+		"/api/login/private",
+		terminalController.EnsureUser,
+	)
+	engine.GET(
+		"/ws/terminal/:port/:pid",
+		terminalController.CreateWebsocketProxy,
+	)
 
-	term := engine.Group("/api/ptwhy", middleware.AuthMiddleware(docker))
-	term.POST("/terminals", terminalController.CreateTerminal)
-	term.POST("/terminals/:pid/size", terminalController.ResizeTerminal)
+	term := engine.Group(
+		"/api/terminal",
+		middleware.AuthMiddleware(docker),
+	)
+	term.POST(
+		"/",
+		terminalController.CreateTerminal,
+	)
+	term.POST(
+		"/:pid/size",
+		terminalController.ResizeTerminal,
+	)
 
 	return engine
 }

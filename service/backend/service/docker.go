@@ -80,9 +80,11 @@ func (docker *DockerService) BuildImage(imageDir string, tag string) {
 	}
 
 	opts := dockerTypes.ImageBuildOptions{
-		Dockerfile: "Dockerfile",
-		Tags:       []string{tag},
-		Remove:     true,
+		Dockerfile:  "Dockerfile",
+		Tags:        []string{tag},
+		Remove:      true,
+		// ForceRemove: true,
+		// NoCache:     true,
 	}
 
 	res, err := docker.Client.ImageBuild(docker.Context, tar, opts)

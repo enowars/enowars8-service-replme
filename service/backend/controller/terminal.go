@@ -32,7 +32,7 @@ func NewTerminalController(docker *service.DockerService) TerminalController {
 	}
 }
 
-func (term *TerminalController) CreateUser(ctx *gin.Context) {
+func (term *TerminalController) EnsureUser(ctx *gin.Context) {
 	var loginRequest types.LoginRequest
 	if err := ctx.ShouldBind(&loginRequest); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

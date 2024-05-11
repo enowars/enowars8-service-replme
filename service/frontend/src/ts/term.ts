@@ -60,7 +60,7 @@ terminal.onResize((size: { cols: number, rows: number }) => {
   const rows = size.rows;
 
   fetch(
-    `/api/ptwhy/terminals/${pid}/size`,
+    `/api/terminal/${pid}/size`,
     {
       method: 'POST',
       headers: {
@@ -91,7 +91,7 @@ async function connect() {
   for (let i = 0; i < retry; i++) {
     try {
       const res = await fetch(
-        '/api/ptwhy/terminals',
+        '/api/terminal',
         {
           method: 'POST',
           headers: {

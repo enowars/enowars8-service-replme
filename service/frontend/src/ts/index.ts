@@ -3,11 +3,10 @@ import { addLogin } from "./lib";
 const form = document.querySelector("#new_container_form");
 
 async function sendData() {
-  // Associate the FormData object with the form element
   const formData = new FormData(form as HTMLFormElement);
 
   try {
-    const response = await fetch("/api/term/private", {
+    const response = await fetch("/api/login/private", {
       method: "POST",
       body: formData,
     });
