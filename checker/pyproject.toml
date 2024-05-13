@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "checker"
+version = "0.1.0"
+description = ""
+authors = ["Jacob Bachmann <jacob.bachmann@posteo.de>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+enochecker3 = "^0.8.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+

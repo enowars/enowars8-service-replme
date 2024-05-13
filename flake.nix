@@ -1,7 +1,9 @@
 {
   description = "cafédodo";
 
-  outputs = { self, nixpkgs, ... }:
+  inputs.poetry2nix.url = "github:nix-community/poetry2nix";
+
+  outputs = { self, nixpkgs, poetry2nix, ... }:
     let
       lastModifiedDate = self.lastModifiedDate or self.lastModified or "19700101";
       version = builtins.substring 0 8 lastModifiedDate;
@@ -38,6 +40,7 @@
       devShells = forAllSystems (system:
         let
           pkgs = nixpkgsFor.${system};
+          inherit (poetry2nix.lib.mkPoetry2Nix { pkgs = nixpkgsFor.${system}; }) mkPoetryEnv;
         in
         {
           default = pkgs.mkShell {
@@ -46,6 +49,11 @@
               gopls
               gotools
               go-tools
+              nodejs_20
+              (mkPoetryEnv { projectDir = ./checker; })
+              poetry
+              ruff
+              enochecker-test
               vscode-langservers-extracted
               tailwindcss-language-server
             ];

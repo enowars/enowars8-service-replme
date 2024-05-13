@@ -1,0 +1,20 @@
+services:
+  cafedodo-checker:
+    build: .
+    ports:
+      - 8000:8000
+    environment:
+     - MONGO_ENABLED=1
+     - MONGO_HOST=cafedodo-mongo
+     - MONGO_PORT=27017
+     - MONGO_USER=cafedodo_checker
+     - MONGO_PASSWORD=cafedodo_checker
+
+  # The python checkerlib requires a mongo db!
+  cafedodo-mongo:
+    image: mongo
+    volumes:
+      - ./data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: cafedodo_checker
+      MONGO_INITDB_ROOT_PASSWORD: cafedodo_checker
