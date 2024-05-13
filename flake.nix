@@ -1,7 +1,7 @@
 {
   description = "cafédodo";
 
-  inputs.poetry2nix.url = "github:nix-community/poetry2nix";
+  inputs.poetry2nix.url = "github:bchmnn/poetry2nix";
 
   outputs = { self, nixpkgs, poetry2nix, ... }:
     let
@@ -50,6 +50,7 @@
               gotools
               go-tools
               nodejs_20
+              nodePackages.pyright
               (mkPoetryEnv { projectDir = ./checker; })
               poetry
               ruff
@@ -63,4 +64,3 @@
       defaultPackage = forAllSystems (system: self.packages.${system}.cafedodo);
     };
 }
-
