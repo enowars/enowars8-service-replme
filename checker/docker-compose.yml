@@ -1,6 +1,7 @@
 services:
   cafedodo-checker:
-    build: .
+    build:
+      dockerfile: Dockerfile
     ports:
       - 9696:8000
     environment:
@@ -19,6 +20,12 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: cafedodo_checker
       MONGO_INITDB_ROOT_PASSWORD: cafedodo_checker
+    networks:
+      - service_cafedodo-net
+
+  cafedodo-crc32:
+    build:
+      dockerfile: Dockerfile.crc32
     networks:
       - service_cafedodo-net
 

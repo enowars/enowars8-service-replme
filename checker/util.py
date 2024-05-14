@@ -1,5 +1,4 @@
 import asyncio
-from asyncio import sleep
 import base64
 import secrets
 import re
@@ -40,16 +39,10 @@ async def create_user(
 
     return (username, password, port)
 
-async def user_login(
-    client: AsyncClient,
-    db: ChainDB,
-    logger: LoggerAdapter,
-) -> tuple[str, str, str]:
-    try:
-        (username, password) = await db.get("credentials")
-    except KeyError:
-        raise MumbleException("Missing database entry from putflag")
 
+async def do_user_login(
+    client: AsyncClient, logger: LoggerAdapter, username: str, password: str
+) -> str:
     logger.info(f"Login user: {username}:{password}")
     response = await client.post(
         "/api/login/private",
@@ -65,7 +58,20 @@ async def user_login(
     assert_equals(port is not None, True, "Did not receive a port")
     logger.info(f"Port: {port}")
 
-    return (username, password, port)
+    return port
+
+
+async def user_login(
+    client: AsyncClient,
+    db: ChainDB,
+    logger: LoggerAdapter,
+) -> tuple[str, str, str]:
+    try:
+        (username, password) = await db.get("credentials")
+    except KeyError:
+        raise MumbleException("Missing database entry from putflag")
+
+    return (username, password, await do_user_login(client, logger, username, password))
 
 
 async def create_terminal(
@@ -104,7 +110,7 @@ async def create_terminal(
 
 async def websocket_recv_until(
     websocket: websockets.WebSocketClientProtocol, pattern: str
-):
+) -> str:
     payload = ""
     match = None
 
@@ -144,12 +150,13 @@ async def terminal_websocket(
     actions: List[tuple[str, str]],
 ):
     url = f"ws://{address}:6969/ws/terminal/{port}/{pid}"
+    response = ""
     async with websockets.connect(url) as websocket:
         await terminal_login(logger, websocket, username, password)
         for action in actions:
             print(action[0].encode("utf-8"))
             await websocket.send(action[0])
             print(action[1].encode("utf-8"))
-            logger.info(await websocket_recv_until(websocket, action[1]))
+            response += await websocket_recv_until(websocket, action[1])
 
-    return ""
+    return response
