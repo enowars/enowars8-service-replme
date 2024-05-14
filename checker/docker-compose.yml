@@ -2,7 +2,7 @@ services:
   cafedodo-checker:
     build: .
     ports:
-      - 8000:8000
+      - 9696:8000
     environment:
       - MONGO_ENABLED=1
       - MONGO_HOST=cafedodo-mongo
