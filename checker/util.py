@@ -7,7 +7,7 @@ from typing import List, Optional
 import websockets
 
 from enochecker3.chaindb import ChainDB
-from enochecker3.types import MumbleException, PutflagCheckerTaskMessage
+from enochecker3.types import MumbleException
 from enochecker3.utils import assert_equals
 from httpx import AsyncClient, Response
 
@@ -109,19 +109,23 @@ async def create_terminal(
 
 
 async def websocket_recv_until(
-    websocket: websockets.WebSocketClientProtocol, pattern: str
+    websocket: websockets.WebSocketClientProtocol,
+    pattern: str,
+    logger: Optional[LoggerAdapter] = None,
 ) -> str:
     payload = ""
     match = None
 
     while match is None:
-        msg = await asyncio.wait_for(websocket.recv(), timeout=5)
+        msg = await asyncio.wait_for(websocket.recv(), timeout=0.5)
         if isinstance(msg, bytes):
             payload += msg.decode("utf-8")
         elif isinstance(msg, str):
             payload += msg
         else:
             raise MumbleException("Websocket connection recv returned unexpected data")
+        if logger is not None:
+            logger.info("PAYLOAD: " + payload)
         match = re.match(pattern, payload, re.S)
 
     return payload
@@ -154,9 +158,11 @@ async def terminal_websocket(
     async with websockets.connect(url) as websocket:
         await terminal_login(logger, websocket, username, password)
         for action in actions:
-            print(action[0].encode("utf-8"))
+            logger.info("Sending: " + str(action[0].encode("utf-8")))
             await websocket.send(action[0])
-            print(action[1].encode("utf-8"))
-            response += await websocket_recv_until(websocket, action[1])
+            logger.info("Expecting: " + str(action[1].encode("utf-8")))
+            _response = await websocket_recv_until(websocket, action[1], logger)
+            logger.info("Got: " + _response)
+            response += _response
 
     return response
