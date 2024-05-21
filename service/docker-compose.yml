@@ -1,9 +1,12 @@
+version: '3'
+
 services:
   backend:
     container_name: cafedodo-backend
     depends_on:
       - dind
     build:
+      context: .
       dockerfile: Dockerfile
     volumes:
       - docker-cert:/cert
