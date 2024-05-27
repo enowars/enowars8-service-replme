@@ -45,6 +45,8 @@
         {
           default = pkgs.mkShell {
             buildInputs = with pkgs; [
+              gcc
+              zlib
               go
               gopls
               gotools

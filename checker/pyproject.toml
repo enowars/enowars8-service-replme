@@ -13,6 +13,7 @@ websockets = "^12.0"
 [tool.poetry.group.dev.dependencies]
 enochecker-cli = "^0.7.0"
 enochecker-test = "^0.9.0"
+sympy = "^1.12"
 
 [build-system]
 requires = ["poetry-core"]
