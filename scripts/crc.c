@@ -297,5 +297,6 @@ void brute_force_crc32() {
 
 int main(int args, char *argv[]) {
   //
-  brute_force_crc32();
+  // brute_force_crc32();
+  printf("0x%x\n", crc8("aa", 2));
 }
