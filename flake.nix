@@ -1,7 +1,7 @@
 {
   description = "cafédodo";
 
-  inputs.poetry2nix.url = "github:bchmnn/poetry2nix";
+  inputs.poetry2nix.url = "github:nix-community/poetry2nix";
 
   outputs = { self, nixpkgs, poetry2nix, ... }:
     let
