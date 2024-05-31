@@ -1,120 +1,159 @@
-# basic prepare ring and vars
-polynom = 0b111010101
-degree = len(bin(polynom)) - 3
+import random
+from collections import namedtuple
 
-__v = ['x']
+def str_to_long(s):
+    ret = 0
+    for c in s:
+        ret = (ret << 8) ^^ ord(c)
 
-for i in range(degree):
-    __v.append(f"b{i}")
+    return ret
 
-P = PolynomialRing(Zmod(2), __v)
+def long_to_str(l):
+    s = []
+    while (l > 0):
+        s.append(l&0xff)
+        l = l >> 8
+    s.reverse()
+    return bytes(s)
 
-x = P.gens()[0]
-bs = P.gens()[1:]
+def alphanumeric_to_long(s):
+    ret = 0
+    for c in s:
+        ret = (ret << 8)
+        v = ord(c)
+        if v == 0b110000:
+            ret = ret ^^ 0b1100000
+        elif v >= 0b110010 and v <= 0b110101:
+            ret = ret ^^ (v+74)
+        else:
+            ret = ret ^^ v
+    return ret
 
-# create polynom p
-p = 0
-for i in range(degree+1):
-    p += ((polynom >> i) & 1)*x^i
+def long_to_alphanumeric(l):
+    s = []
+    while (l > 0):
+        c = l&0xff
+        if c == 0b1100000:
+            s.append(0b110000)
+        elif c >= 0b1111011 and c <= 0b01111111:
+            s.append(c-74)
+        else:
+            s.append(l&0xff)
+        l = l >> 8
+    s.reverse()
+    return bytes(s).decode()
 
-# create coefficient b (a=bp+r)
-b = 0
-for i in range(degree):
-    b += bs[i] * x^i
+def crcN(p, s):
+    d = len(bin(p)) - 3
+    mask = (2**d) - 1
+    creg = 0
+    for j in range(len(s)):
+        c = ord(s[j])
+        for _ in range(8):
+            if ((creg ^^ (c << (d-8))) & (1<<(d-1))) > 0:
+                creg = ((creg << 1) ^^ p) & mask
+            else:
+                creg = (creg << 1) & mask
+            c = c << 1
+    return creg
 
-pb = p*b
+Context = namedtuple('Context', 'degree P x bs p b pb')
 
-# prepare underdetermined system for
-A = []
-for i in range(15, 0, -8):
-    for j in range(3):
-        row = [0]*len(bs)
-        for c, _b in pb.coefficient(x^(i-j)):
-            row[bs.index(_b)] = 1
+def get_random_prime_polynom(degree):
+    P.<x> = PolynomialRing(Zmod(2), 'x')
+    while(True):
+        p = P.random_element(degree);
+        if str(factor(p)) == str(p):
+            return int(''.join(map(str, p.polynomial(x).coefficients(sparse=False)[::-1])), 2)
+
+def prepare(polynom, input_len):
+    # prepare ring and vars
+    degree = len(bin(polynom)) - 3
+
+    __v = ['x']
+
+    for i in range(input_len*8):
+        __v.append(f"b{i}")
+
+    P = PolynomialRing(Zmod(2), __v)
+
+    x = P.gens()[0]
+    bs = P.gens()[1:]
+
+    # create polynom p
+    p = 0
+    for i in range(degree+1):
+        p += ((polynom >> i) & 1)*x^i
+
+    # create coefficient b (a=bp+r)
+    b = 0
+    for i in range(input_len*8):
+        b += bs[i] * x^i
+
+    pb = p*b
+
+    return Context(degree, P, x, bs, p, b, pb)
+
+def calculate_kernel(ctx):
+    # prepare underdetermined system for
+    x = ctx.x
+    A = []
+    for i in range(ctx.pb.degree()-1, ctx.degree, -8):
+        for j in range(3):
+            row = [0]*len(ctx.bs)
+            for c, _b in ctx.pb.coefficient(x^(i-j)):
+                row[ctx.bs.index(_b)] = 1
+            A.append(row)
+
+    for i in range(ctx.degree, 0, -1):
+        row = [0]*len(ctx.bs)
+        for c, _b in ctx.pb.coefficient(x^i):
+            row[ctx.bs.index(_b)] = 1
         A.append(row)
 
-# calculate kernel span Ab=0
-A = Matrix(GF(2), A)
-k = A.right_kernel().basis()
+    row = [0]*len(ctx.bs)
+    for c, _b in ctx.pb(x=0):
+        row[ctx.bs.index(_b)] = 1
 
-# calculate all elements in kernel
-def all_combinations(vectors):
-    from itertools import product
-    n = len(vectors)
-    for comb in product([0, 1], repeat=n):
-        yield sum(c*v for c, v in zip(comb, vectors))
+    A.append(row)
 
-# calculate delta for each element in kernel d=ep
-solutions = []
-for e in all_combinations(k):
-    solution = 0
-    for i, bi in enumerate(e):
-        solution += bi*x^i
-    solutions.append(p*solution)
+    # calculate kernel span Ab=0
+    A = Matrix(GF(2), A)
+    k = A.right_kernel().basis()
+    return k
 
-# delta to binary
-for s in solutions:
-    __c = s.univariate_polynomial().coefficients(sparse=False)
-    if len(__c) > 0:
-        print(''.join(map(str, __c[::-1])))
+def get_random_delta(ctx, k):
+    x = ctx.x
+    _c = random.randrange(1, 2**(len(k)))
+    _v = [0]*len(k)
+    for i in range(len(k)):
+        _v[i] = (_c >> i) & 1
+    _d = sum(c*v for c, v in zip(_v, k))
+    d = 0
+    for i, bi in enumerate(_d):
+        d += bi*x^i
+    d = d*ctx.p
+    __c = d.univariate_polynomial().coefficients(sparse=False)
+    return ''.join(map(str, __c[ctx.p.degree():][::-1]))
 
-# b2 = 1*x^4 + 1*x^3 + 1*x^2 + 1*x
-# b3 = 0*x^4 + 1*x^3 + 0*x^2 + 1*x
-# b4 = 1*x^4 + 0*x^3 + 1*x^2 + 0*x
-# b5 = 0*x^4 + 0*x^3 + 0*x^2 + 0*x
+def calculate_pre_image(p, s):
+    print("Polynom     :", hex(p))
+    print("Degree      :", len(bin(p)) - 3)
+    print("Input       :", s)
+    print("CRCN(Input) :", hex(crcN(p, s)))
+    ctx = prepare(p, len(s))
+    k = calculate_kernel(ctx)
+    print("#Span       :", len(k))
+    print("#Kernel     :", 2**(len(k)))
+    while True:
+        d = int(get_random_delta(ctx, k), 2)
+        s2 = str_to_long(s) ^^ d
+        s2raw = long_to_str(s2)
+        s2an = long_to_alphanumeric(s2)
+        print("raw pre-img :", s2raw)
+        print("2nd pre-img :", s2an)
+        if s2an[0].isalpha():
+            break
+    print()
 
-# print("===")
-# print(p*b2)
-# print("===")
-# print(p*b3)
-# print("===")
-# print(p*b4)
-# print("===")
-# print(p*b5)
-# print("===")
-
-# b7 = 0
-# b6 = 0
-# b5 = 0
-# b0 = 0
-#
-# b2 = b4
-# b1 = b3
-#
-
-#          12  1110 9 8   7 6 5 4   3 2 1 0
-#           k   l m n o         r   s t u v
-# aa  0 1 1 0 | 0 0 0 1 | 0 1 1 0 | 0 0 0 1
-#  +  0 0 0 1 | 0 1 1 1 | 0 0 0 0 | 0 1 1 0
-# ??  0 1 1 1 | 0 1 1 0 | 0 1 1 0 | 0 1 1 1
-# vg  0 1 1 1 | 0 1 1 0 | 0 1 1 0 | 0 1 1 1
-
-
-# aa  0 1 1 0 | 0 0 0 1 | 0 1 1 0 | 0 0 0 1
-# ??  0 1 1 0 | 1 1 0 0 | 0 1 1 0 | 0 0 1 1
-# lc  0 1 1 0 | 1 1 0 0 | 0 1 1 0 | 0 0 1 1
-
-
-# aa  0 1 1 0 | 0 0 0 1 | 0 1 1 0 | 0 0 0 1
-# ??  0 1 1 1 | 1 0 1 1 | 0 1 1 0 | 0 1 0 1
-# {e  0 1 1 1 | 1 0 1 1 | 0 1 1 0 | 0 1 0 1
-#
-#
-# 0 = b7
-# 0 = b6 + b7
-# 0 = b5 + b6 + b7
-# 0 = b0 + b1 + b3 + b5 + b7
-# 0 = b0 + b2 + b4 + b6
-# 0 = b1 + b3 + b5
-#
-#
-# 1 0 0 0 0 0 0 0   b7   0
-# 1 1 0 0 0 0 0 0   b6   0
-# 1 1 1 0 0 0 0 0   b5   0
-# 1 0 1 0 1 0 1 1 * b4 = 0
-# 0 1 0 1 0 1 0 1   b3   0
-# 0 0 1 0 1 0 1 0   b2   0
-#                   b1
-#                   b0
-#
-#
+calculate_pre_image(get_random_prime_polynom(187), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
