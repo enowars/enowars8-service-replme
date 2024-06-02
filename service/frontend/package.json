@@ -2,9 +2,7 @@
   "scripts": {
     "build": "webpack --config webpack.config.js",
     "webpack": "webpack",
-    "tailwind": "tailwindcss",
-    "tailwind-build": "tailwindcss -i client/style.css -o static/css/style.css",
-    "tailwind-watch": "tailwindcss -i client/style.css -o static/css/style.css -pw"
+    "tailwind": "tailwindcss"
   },
   "dependencies": {
     "@xterm/addon-attach": "^0.11.0",

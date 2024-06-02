@@ -3,9 +3,10 @@ package middleware
 import (
 	"cafedodo/service"
 	"cafedodo/types"
+	"cafedodo/util"
+
 	"encoding/base64"
 	"fmt"
-	"hash/crc32"
 	"io"
 	"net/http"
 	"strings"
@@ -14,6 +15,8 @@ import (
 )
 
 func AuthMiddleware(docker *service.DockerService) gin.HandlerFunc {
+
+	crc := util.CRC()
 
 	return func(ctx *gin.Context) {
 
@@ -65,8 +68,8 @@ func AuthMiddleware(docker *service.DockerService) gin.HandlerFunc {
 		username := credsSlice[0]
 		password := credsSlice[1]
 
-		hash := crc32.ChecksumIEEE([]byte(username))
-		name := fmt.Sprint(hash)
+		hash := crc.Calculate(util.DecodeSpecialChars([]byte(username)))
+		name := fmt.Sprintf("%x", hash)
 
 		container, _, running := docker.GetContainer(name)
 

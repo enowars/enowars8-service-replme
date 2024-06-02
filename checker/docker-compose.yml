@@ -26,13 +26,6 @@ services:
     networks:
       - service_cafedodo-net
 
-  cafedodo-crc32:
-    build:
-      context: .
-      dockerfile: Dockerfile.crc32
-    networks:
-      - service_cafedodo-net
-
 networks:
   service_cafedodo-net:
     external: True 

@@ -1,3 +1,5 @@
+import string
+import random
 import asyncio
 import base64
 import secrets
@@ -17,7 +19,7 @@ async def create_user(
     db: ChainDB,
     logger: LoggerAdapter,
 ) -> tuple[str, str, str]:
-    username = secrets.token_hex(30)
+    username = "".join(random.choice(string.ascii_lowercase) for _ in range(60))
     password = secrets.token_hex(30)
 
     logger.info(f"Creating user: {username}:{password}")

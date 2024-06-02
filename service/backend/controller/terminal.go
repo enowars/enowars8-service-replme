@@ -3,8 +3,8 @@ package controller
 import (
 	"cafedodo/service"
 	"cafedodo/types"
+	"cafedodo/util"
 	"fmt"
-	"hash/crc32"
 	"io"
 	"net/http"
 	"strconv"
@@ -17,6 +17,7 @@ import (
 type TerminalController struct {
 	Docker   *service.DockerService
 	Upgrader websocket.Upgrader
+	CRC      util.CRCUtil
 }
 
 func NewTerminalController(docker *service.DockerService) TerminalController {
@@ -29,6 +30,7 @@ func NewTerminalController(docker *service.DockerService) TerminalController {
 				return true
 			},
 		},
+		CRC: util.CRC(),
 	}
 }
 
@@ -39,8 +41,8 @@ func (term *TerminalController) EnsureUser(ctx *gin.Context) {
 		return
 	}
 
-	hash := crc32.ChecksumIEEE([]byte(loginRequest.Username))
-	name := fmt.Sprint(hash)
+	hash := term.CRC.Calculate(util.DecodeSpecialChars([]byte(loginRequest.Username)))
+	name := fmt.Sprintf("%x", hash)
 
 	_, port, err := term.Docker.EnsureContainerStarted(
 		name,

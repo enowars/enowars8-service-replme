@@ -1,4 +1,5 @@
 import random
+import json
 from collections import namedtuple
 
 def str_to_long(s, reverse_bytes=False):
@@ -67,6 +68,37 @@ def crcN(p, s):
                 creg = (creg << 1) & mask
             c = c << 1
     return creg
+
+def gen_crc_table(p, reverse_in=False):
+    degree = len(bin(p)) - 3
+    table = []
+    mask = 2**degree-1
+    for i in range(256):
+        c = i
+        if reverse_in:
+            c = int('{:08b}'.format(i)[::-1], 2)
+        c = c << degree - 8
+        m = 1 << (degree - 1)
+        for _ in range(8):
+            if (c & m) != 0:
+                c = (c << 1) ^^ p
+            else:
+                c = c << 1
+        c = c & mask
+        if reverse_in:
+            c = int(bin(c^^(1 << degree))[2::][::-1][:-1], 2)
+        table.append(c)
+    return table
+
+def crcT(degree, table, s):
+    r = 0
+    mask = 2**degree-1
+    for j in range(len(s)):
+        c = ord(s[j])
+        r = table[((r >> (degree - 8)) ^^ c) & 0xff] ^^ (r << 8)
+        r = r & mask
+    return r
+
 
 Context = namedtuple('Context', 'degree P x bs p b pb')
 
@@ -150,8 +182,15 @@ def get_random_delta(ctx, k):
     return ''.join(map(str, __c[ctx.p.degree():][::-1]))
 
 def calculate_pre_image(p, s, reverse_in=False):
+    checker_file = open('checker_data.json', 'w')
+    service_file = open('service_data.json', 'w')
+    checker_data = {
+        'polynom': hex(p)[2:]
+    }
+    service_data = {}
+    degree = len(bin(p)) - 3
     print("Polynom     :", hex(p))
-    print("Degree      :", len(bin(p)) - 3)
+    print("Degree      :", degree)
     print("Input       :", s)
     # print("CRCN(Input) :", hex(crcN(p, s)))
     ctx = prepare(p, len(s))
@@ -159,6 +198,11 @@ def calculate_pre_image(p, s, reverse_in=False):
     k = calculate_kernel(ctx, mask)
     print("#Span       :", len(k))
     print("#Kernel     :", 2**(len(k)))
+    deltas = []
+    for i in range(100):
+        d = int(get_random_delta(ctx, k), 2)
+        deltas.append(hex(d)[2:])
+    checker_data['deltas'] = deltas
     while True:
         d = int(get_random_delta(ctx, k), 2)
         s2 = str_to_long(s, reverse_in) ^^ d
@@ -168,8 +212,15 @@ def calculate_pre_image(p, s, reverse_in=False):
         print("2nd pre-img :", s2an)
         if s2an[0].isalpha():
             break
+    table = gen_crc_table(p, reverse_in)
+    table = list(map(lambda x: hex(x)[2:], table))
+    checker_data['table'] = table
+    service_data['table'] = table
+    checker_file.write(json.dumps(checker_data, indent=2))
+    service_file.write(json.dumps(service_data, indent=2))
+    checker_file.close()
+    service_file.close()
     print()
 
-# calculate_pre_image(0x104C11DB7, "aaaaaaaaaaaaaaaaaaaaaaaa", True)
-calculate_pre_image(0x104C11DB7, "aaaaaaaaaaaaaaaaaaaaaaaa")
-# calculate_pre_image(get_random_prime_polynom(187), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+# calculate_pre_image(get_random_prime_polynom(251), "a"*60)
+calculate_pre_image(0x8561cc4ee956c6503c5da0ffacb20feabb3eb142e7645e7ff1a2067fd8e1cfb, "a"*60)

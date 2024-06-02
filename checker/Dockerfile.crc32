@@ -1,6 +1,0 @@
-FROM golang
-
-COPY crc32.go .
-
-EXPOSE 3333/tcp
-ENTRYPOINT [ "go", "run", "crc32.go" ]
