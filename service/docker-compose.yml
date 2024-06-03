@@ -16,9 +16,6 @@ services:
     ports:
       - 6969:6969
     restart: "unless-stopped"
-    networks:
-      - cafedodo-net
-
 
   dind:
     image: docker:dind
@@ -29,13 +26,9 @@ services:
     restart: "unless-stopped"
     volumes:
       - docker-cert:/certs
-    networks:
-      - cafedodo-net
+      - ./data/docker:/var/lib/docker
+      - ./data/:/app/data/
 
 volumes:
   docker-cert:
-
-networks:
-  cafedodo-net:
-    driver: bridge
 

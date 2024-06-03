@@ -59,6 +59,9 @@
               enochecker-test
               vscode-langservers-extracted
               tailwindcss-language-server
+              (writeScriptBin "ect" ''
+                ENOCHECKER_TEST_CHECKER_ADDRESS="127.0.0.1" ENOCHECKER_TEST_CHECKER_PORT="16969" ENOCHECKER_TEST_SERVICE_ADDRESS=$(ifconfig wlp3s0 | grep 'inet ' | xargs | cut -d ' ' -f2) enochecker_test
+              '')
             ];
           };
         });

@@ -13,8 +13,6 @@ services:
       - MONGO_PORT=27017
       - MONGO_USER=cafedodo_checker
       - MONGO_PASSWORD=cafedodo_checker
-    networks:
-      - service_cafedodo-net
 
   cafedodo-mongo:
     image: mongo
@@ -23,10 +21,3 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: cafedodo_checker
       MONGO_INITDB_ROOT_PASSWORD: cafedodo_checker
-    networks:
-      - service_cafedodo-net
-
-networks:
-  service_cafedodo-net:
-    external: True 
-
