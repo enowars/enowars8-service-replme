@@ -4,5 +4,6 @@
 **/__pycache__
 
 checker/data
+service/data
 documentation/crc/crc.sage.py
 
