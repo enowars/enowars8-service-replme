@@ -126,7 +126,7 @@ async def exploit0(
         ],
     )
 
-    match = re.findall(r"FLAG\s*([A-Za-z0-9\+\=]+)\s*OK", response)
+    match = re.findall(r"FLAG\s*([A-Za-z0-9\+\=\/]+)\s*OK", response)
     if len(match) == 0:
         return None
 
