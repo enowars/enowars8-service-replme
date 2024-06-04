@@ -1,5 +1,5 @@
 {
-  description = "cafédodo";
+  description = "repl.me";
 
   inputs.poetry2nix.url = "github:nix-community/poetry2nix";
 
@@ -18,10 +18,10 @@
           pkgs = nixpkgsFor.${system};
         in
         {
-          cafedodo = pkgs.buildGoModule {
-            pname = "cafedodo";
+          replme = pkgs.buildGoModule {
+            pname = "replme";
             inherit version;
-            src = ./service/server;
+            src = ./service/backend;
 
             # This hash locks the dependencies of this package. It is
             # necessary because of how Go requires network access to resolve
@@ -66,6 +66,6 @@
           };
         });
 
-      defaultPackage = forAllSystems (system: self.packages.${system}.cafedodo);
+      defaultPackage = forAllSystems (system: self.packages.${system}.replme);
     };
 }

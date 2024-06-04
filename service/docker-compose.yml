@@ -2,7 +2,7 @@ version: '3'
 
 services:
   backend:
-    container_name: cafedodo-backend
+    container_name: replme-backend
     depends_on:
       - dind
     build:
@@ -19,7 +19,7 @@ services:
 
   dind:
     image: docker:dind
-    container_name: cafedodo-dind
+    container_name: replme-dind
     privileged: true
     environment:
       - DOCKER_TLS_CERTDIR=/certs

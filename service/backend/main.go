@@ -4,8 +4,8 @@ import (
 	"flag"
 	"os"
 
-	"cafedodo/server"
-	"cafedodo/service"
+	"replme/server"
+	"replme/service"
 )
 
 func main() {

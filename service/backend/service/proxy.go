@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"cafedodo/types"
+	"replme/types"
 
 	"github.com/gorilla/websocket"
 )

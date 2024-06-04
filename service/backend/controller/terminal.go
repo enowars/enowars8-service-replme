@@ -1,9 +1,9 @@
 package controller
 
 import (
-	"cafedodo/service"
-	"cafedodo/types"
-	"cafedodo/util"
+	"replme/service"
+	"replme/types"
+	"replme/util"
 	"fmt"
 	"io"
 	"net/http"

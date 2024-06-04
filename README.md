@@ -1,4 +1,4 @@
-# cafédodo
+# repl.me
 
 Throwaway devenvs in the web.
 
@@ -25,5 +25,5 @@ Flags are stored in some user's home on the shared and personal containers. Flag
 - pty wrapper: xterm.js for prototype; C, libvterm for mvp
 - server: go / next.js (TBD)
 - client: html/css/js / react.js / next.js (TBD)
-- coffeelounge: java (duh)
+- coffeelounge: java
 

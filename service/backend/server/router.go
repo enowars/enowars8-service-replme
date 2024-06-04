@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"path"
 
-	"cafedodo/controller"
-	"cafedodo/middleware"
-	"cafedodo/service"
+	"replme/controller"
+	"replme/middleware"
+	"replme/service"
 
 	"github.com/gin-gonic/gin"
 )

@@ -1,4 +1,4 @@
-module cafedodo
+module replme
 
 go 1.21.0
 

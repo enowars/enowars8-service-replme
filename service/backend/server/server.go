@@ -1,6 +1,6 @@
 package server
 
-import "cafedodo/service"
+import "replme/service"
 
 func Init(docker *service.DockerService, dist string) {
 	engine := NewRouter(docker, dist)

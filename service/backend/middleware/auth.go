@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"cafedodo/service"
-	"cafedodo/types"
-	"cafedodo/util"
+	"replme/service"
+	"replme/types"
+	"replme/util"
 
 	"encoding/base64"
 	"fmt"

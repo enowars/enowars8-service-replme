@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  cafedodo-checker:
+  replme-checker:
     build:
       context: .
       dockerfile: Dockerfile
@@ -9,15 +9,15 @@ services:
       - 16969:8000
     environment:
       - MONGO_ENABLED=1
-      - MONGO_HOST=cafedodo-mongo
+      - MONGO_HOST=replme-mongo
       - MONGO_PORT=27017
-      - MONGO_USER=cafedodo_checker
-      - MONGO_PASSWORD=cafedodo_checker
+      - MONGO_USER=replme_checker
+      - MONGO_PASSWORD=replme_checker
 
-  cafedodo-mongo:
+  replme-mongo:
     image: mongo
     volumes:
       - ./data:/data/db
     environment:
-      MONGO_INITDB_ROOT_USERNAME: cafedodo_checker
-      MONGO_INITDB_ROOT_PASSWORD: cafedodo_checker
+      MONGO_INITDB_ROOT_USERNAME: replme_checker
+      MONGO_INITDB_ROOT_PASSWORD: replme_checker
