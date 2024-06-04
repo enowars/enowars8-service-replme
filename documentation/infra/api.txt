@@ -1,0 +1,37 @@
+home
+====
+Signup        Signin
+Try it out    Browse
+
+server
+======
+POST /api/repl { username, password }
+        - create container
+            => inject api-token
+        - start  container
+        - POST /api/auth/register => sessionId
+        - Create replId
+            => { name, sessionId }
+WS   /api/repl/:replId
+POST /api/repl/:replId/size
+
+image
+=====
+-- all endpoints secured behind api-token --
+POST /api/auth/register => sessionId
+POST /api/auth/login    => sessionId
+POST /api/term { executable }
+        - spawn pty with executable under uid
+        - bind pid to sessionId
+WS   /api/term/:sessionId
+POST /api/term/:sessionId/size
+
+server-v2
+=========
+POST  /api/auth/signup
+POST  /api/auth/signin
+
+GET   /api/env
+POST  /api/env/create         { type: "string" }
+PATCH /api/env/:id/visibility { type: "public" | "private" }
+
