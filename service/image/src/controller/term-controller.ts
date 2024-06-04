@@ -106,7 +106,7 @@ const websocket: WebsocketRequestHandler = (ws, req) => {
     userInput = true;
   });
   ws.on('close', function() {
-    term.kill();
+    term.kill('SIGKILL');
     console.log('Closed terminal ' + term.pid);
     delete terminals[term.pid];
   });

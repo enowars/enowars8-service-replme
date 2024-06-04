@@ -9,13 +9,15 @@ import (
 	"log"
 	"net"
 	"os"
-	"strings"
 	"path"
+	"strings"
 
 	"cafedodo/types"
 
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
@@ -80,9 +82,9 @@ func (docker *DockerService) BuildImage(imageDir string, tag string) {
 	}
 
 	opts := dockerTypes.ImageBuildOptions{
-		Dockerfile:  "Dockerfile",
-		Tags:        []string{tag},
-		Remove:      true,
+		Dockerfile: "Dockerfile",
+		Tags:       []string{tag},
+		Remove:     true,
 		// ForceRemove: true,
 		// NoCache:     true,
 	}
@@ -101,16 +103,52 @@ func (docker *DockerService) BuildImage(imageDir string, tag string) {
 	}
 }
 
-func (docker *DockerService) CreateContainer(opts types.RunContainerOptions) (container.CreateResponse, error) {
-	return docker.Client.ContainerCreate(
-		docker.Context, &container.Config{Image: opts.ImageTag},
+func (docker *DockerService) CreateContainer(
+	opts types.RunContainerOptions,
+) (*container.CreateResponse, error) {
+
+	volumeEtc, err := docker.Client.VolumeCreate(docker.Context, volume.CreateOptions{
+		Name: fmt.Sprintf("%s_etc", opts.ContainerName),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	volumeHome, err := docker.Client.VolumeCreate(docker.Context, volume.CreateOptions{
+		Name: fmt.Sprintf("%s_home", opts.ContainerName),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	container, err := docker.Client.ContainerCreate(
+		docker.Context,
+		&container.Config{
+			Image: opts.ImageTag,
+		},
 		&container.HostConfig{
 			PortBindings: opts.Ports,
+			Mounts: []mount.Mount{
+				{
+					Type:   mount.TypeVolume,
+					Source: volumeEtc.Name,
+					Target: "/etc",
+				},
+				{
+					Type:   mount.TypeVolume,
+					Source: volumeHome.Name,
+					Target: "/home",
+				},
+			},
 		},
 		nil,
 		nil,
 		opts.ContainerName,
 	)
+
+	return &container, err
 }
 
 func (docker *DockerService) GetContainer(name string) (
@@ -208,6 +246,7 @@ func (docker *DockerService) EnsureContainerStarted(
 		})
 
 		if err != nil {
+			fmt.Println(err)
 			return nil, nil, dockerTypes.ErrorResponse{
 				Message: "Container creation failed",
 			}
