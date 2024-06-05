@@ -1,12 +1,12 @@
 package controller
 
 import (
-	"replme/service"
-	"replme/types"
-	"replme/util"
 	"fmt"
 	"io"
 	"net/http"
+	"replme/service"
+	"replme/types"
+	"replme/util"
 	"strconv"
 	"time"
 
@@ -44,11 +44,7 @@ func (term *TerminalController) EnsureUser(ctx *gin.Context) {
 	hash := term.CRC.Calculate(util.DecodeSpecialChars([]byte(loginRequest.Username)))
 	name := fmt.Sprintf("%x", hash)
 
-	_, port, err := term.Docker.EnsureContainerStarted(
-		name,
-		loginRequest.Username,
-		loginRequest.Password,
-	)
+	_, port, err := term.Docker.EnsureContainerStarted(name)
 
 	if err != nil {
 		ctx.JSON(400, types.ErrorResponse{
@@ -58,7 +54,7 @@ func (term *TerminalController) EnsureUser(ctx *gin.Context) {
 	}
 
 	var response *http.Response
-	p := service.Proxy(term.Docker.HostIP, *port)
+	p := service.Proxy(term.Docker.HostIP, *port, term.Docker.ApiKey)
 
 	for i := 0; i < 5; i++ {
 		response, err = p.SendUserCreateRequest(types.LoginRequest{
@@ -110,7 +106,7 @@ func (term *TerminalController) CreateTerminal(ctx *gin.Context) {
 		return
 	}
 
-	p := service.Proxy(term.Docker.HostIP, port)
+	p := service.Proxy(term.Docker.HostIP, port, term.Docker.ApiKey)
 	response, err := p.SendCreateTermProcessRequest(
 		createTermProcessRequest,
 	)
@@ -145,7 +141,7 @@ func (term *TerminalController) ResizeTerminal(ctx *gin.Context) {
 		return
 	}
 
-	p := service.Proxy(term.Docker.HostIP, port)
+	p := service.Proxy(term.Docker.HostIP, port, term.Docker.ApiKey)
 	response, err := p.SendUpdateTermSizeRequest(
 		pid,
 		updateTermSizeRequest,
@@ -187,7 +183,7 @@ func (term *TerminalController) CreateWebsocketProxy(ctx *gin.Context) {
 	}
 	defer clientConn.Close()
 
-	p := service.Proxy(term.Docker.HostIP, port)
+	p := service.Proxy(term.Docker.HostIP, port, term.Docker.ApiKey)
 	err = p.CreateWebsocketPipe(clientConn, pid)
 
 	if err != nil {

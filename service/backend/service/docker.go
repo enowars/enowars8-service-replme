@@ -27,9 +27,10 @@ type DockerService struct {
 	Context context.Context
 	Client  *client.Client
 	HostIP  string
+	ApiKey  string
 }
 
-func Docker() DockerService {
+func Docker(apiKey string) DockerService {
 	ctx := context.Background()
 
 	opts := []client.Opt{
@@ -57,6 +58,7 @@ func Docker() DockerService {
 		Context: ctx,
 		Client:  cli,
 		HostIP:  ip,
+		ApiKey:  apiKey,
 	}
 }
 
@@ -127,6 +129,7 @@ func (docker *DockerService) CreateContainer(
 		docker.Context,
 		&container.Config{
 			Image: opts.ImageTag,
+			Env:   []string{fmt.Sprintf("API_KEY=%s", docker.ApiKey)},
 		},
 		&container.HostConfig{
 			PortBindings: opts.Ports,
@@ -222,8 +225,6 @@ func (docker *DockerService) GetContainerAddress(id string) (*string, *uint16, e
 
 func (docker *DockerService) EnsureContainerStarted(
 	name string,
-	username string,
-	password string,
 ) (*string, *uint16, error) {
 	var id string
 
@@ -272,4 +273,15 @@ func (docker *DockerService) EnsureContainerStarted(
 	}
 
 	return ip, port, nil
+}
+
+func (docker *DockerService) GetContainerPort(name string) *uint16 {
+
+	container, _, running := docker.GetContainer(name)
+	if !running {
+		return nil
+	}
+	_, port, _ := docker.GetContainerAddress(container.ID)
+
+	return port
 }

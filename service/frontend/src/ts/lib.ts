@@ -27,3 +27,12 @@ export async function sleep(ms: number) {
   })
 }
 
+export function randomString(n: number): string {
+  const charSet = 'abcdefghijklmnopqrstuvwxyz012345';
+  var str = '';
+  for (let i = 0; i < n; i++) {
+    const j = Math.floor(Math.random() * charSet.length);
+    str += charSet[j];
+  }
+  return str;
+}

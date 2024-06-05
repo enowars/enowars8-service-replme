@@ -10,14 +10,34 @@ interface UserEntry {
   pw: string;
 }
 
+interface UserData {
+  username: string;
+  password: string;
+  uid: number;
+  gid: number;
+  gecos: string;
+  home: string;
+  shell: string;
+}
+
 function findUserHash(username: string): string | undefined {
   const shadow = fs.readFileSync('/etc/shadow', 'utf8').split('\n');
 
-  const hash = shadow.find((user) => {
-    return user.startsWith(username)
+  const hash = shadow.find((line) => {
+    return line.startsWith(username)
   })
 
   return hash;
+}
+
+function findUserPasswdEntry(username: string): string | undefined {
+  const passwd = fs.readFileSync('/etc/passwd', 'utf8').split('\n');
+
+  const user = passwd.find((line) => {
+    return line.startsWith(username)
+  })
+
+  return user;
 }
 
 function extractUserEntry(line: string): UserEntry {
@@ -39,6 +59,20 @@ function extractUserEntry(line: string): UserEntry {
     pw
   }
 }
+
+function extractUserData(line: string): UserData {
+  const [username, password, uid, gid, gecos, home, shell] = line.split(':')
+  return {
+    username,
+    password,
+    uid: Number(uid),
+    gid: Number(gid),
+    gecos,
+    home,
+    shell
+  }
+}
+
 
 function validateUserPassword(entry: UserEntry, password: string): boolean {
   const buf = child_process.execSync(
@@ -74,7 +108,7 @@ function create(username: string, password: string): "ok" | "created" {
 
   if (hash) {
     const user = extractUserEntry(hash);
-    const valid =  validateUserPassword(user, password);
+    const valid = validateUserPassword(user, password);
     if (!valid) {
       throw new UserServiceError(401, "Invalid credentials");
     }
@@ -86,9 +120,17 @@ function create(username: string, password: string): "ok" | "created" {
   return "created";
 }
 
+function info(username: string): UserData | undefined {
+  const entry = findUserPasswdEntry(username);
+  if (!entry)
+    throw new UserServiceError(404, "Invalid credentials");
+  return extractUserData(entry);
+}
+
 const UserService = {
   login,
-  create
+  create,
+  info,
 }
 
 export default UserService;

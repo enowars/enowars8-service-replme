@@ -1,14 +1,17 @@
 package main
 
 import (
+	"encoding/gob"
 	"flag"
 	"os"
 
 	"replme/server"
 	"replme/service"
+	"replme/types"
 )
 
 func main() {
+	gob.Register(types.Containers{})
 
 	var distPath string
 	var imagePath string
@@ -23,9 +26,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	apiKey := "secret"
 	imageTag := "ptwhy"
 
-	docker := service.Docker()
+	docker := service.Docker(apiKey)
 	docker.BuildImage(imagePath, imageTag)
 
 	server.Init(&docker, distPath)

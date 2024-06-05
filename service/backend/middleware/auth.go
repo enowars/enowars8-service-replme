@@ -102,7 +102,7 @@ func AuthMiddleware(docker *service.DockerService) gin.HandlerFunc {
 			return
 		}
 
-		p := service.Proxy(docker.HostIP, *port)
+		p := service.Proxy(docker.HostIP, *port, docker.ApiKey)
 		response, err := p.SendUserLoginRequest(types.LoginRequest{
 			Username: username,
 			Password: password,

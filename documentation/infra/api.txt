@@ -5,7 +5,7 @@ Try it out    Browse
 
 server
 ======
-POST /api/repl { username, password }
+POST /api/repl { username: "string", password: "string" }
         - create container
             => inject api-token
         - start  container
@@ -20,11 +20,11 @@ image
 -- all endpoints secured behind api-token --
 POST /api/auth/register => sessionId
 POST /api/auth/login    => sessionId
-POST /api/term { executable }
+POST /api/term { executable: "string" }
         - spawn pty with executable under uid
         - bind pid to sessionId
-WS   /api/term/:sessionId
-POST /api/term/:sessionId/size
+WS   /api/term
+POST /api/term/size
 
 server-v2
 =========
