@@ -1,7 +1,6 @@
 import string
 import random
 import asyncio
-import base64
 import re
 from logging import LoggerAdapter
 from typing import List, Optional
@@ -10,7 +9,7 @@ import websockets
 from enochecker3.chaindb import ChainDB
 from enochecker3.types import MumbleException
 from enochecker3.utils import assert_equals
-from httpx import AsyncClient, Cookies, Response
+from httpx import AsyncClient, Cookies
 
 
 async def create_user(
@@ -76,38 +75,30 @@ async def user_login(
     return (username, password, cookies, replUuid)
 
 
-async def create_terminal(
-    client: AsyncClient, logger: LoggerAdapter, username: str, password: str
-) -> str:
-    logger.info("Creating terminal")
-    response: Optional[Response] = None
-    for _ in range(5):
-        response = await client.post(
-            "/api/terminal",
-            headers={
-                "Authorization": "Basic "
-                + base64.b64encode(f"{username}:{password}".encode("utf-8")).decode(
-                    "utf-8"
-                )
-            },
-            json={"cols": 80, "rows": 25},
-            follow_redirects=True,
-        )
-        if response.status_code < 300:
-            break
+def is_list_of_str(element):
+    if isinstance(element, list):
+        return all(isinstance(item, str) for item in element)
+    return False
 
-    if response is None:
-        raise MumbleException("Create terminal request failed")
 
+async def get_sessions(
+    client: AsyncClient,
+    cookies: Cookies,
+    logger: LoggerAdapter,
+) -> List[str]:
+    response = await client.get(
+        "/api/user/sessions",
+        cookies=cookies,
+        follow_redirects=True,
+    )
     logger.info(f"Server answered: {response.status_code} - {response.text}")
+    assert_equals(response.status_code < 300, True, "Getting sessions failed")
 
-    assert_equals(response.status_code < 300, True, "Creating terminal failed")
+    json = response.json()
+    assert_equals(is_list_of_str(json), True, "Did not receive valid sessions obj")
+    logger.info(f"Sessions: {json}")
 
-    pid = response.text
-    assert_equals(pid is not None, True, "Did not receive a PID")
-    logger.info(f"PID: {pid}")
-
-    return pid
+    return json
 
 
 async def websocket_recv_until(
@@ -131,19 +122,6 @@ async def websocket_recv_until(
         match = re.match(pattern, payload, re.S)
 
     return payload
-
-
-async def terminal_login(
-    logger: LoggerAdapter,
-    websocket: websockets.WebSocketClientProtocol,
-    username: str,
-    password: str,
-):
-    logger.info(await websocket_recv_until(websocket, ".*login:.*"))
-    await websocket.send(username + "\n")
-    logger.info(await websocket_recv_until(websocket, ".*Password:.*"))
-    await websocket.send(password + "\n")
-    logger.info(await websocket_recv_until(websocket, ".*Welcome to Alpine!.*"))
 
 
 async def terminal_websocket(

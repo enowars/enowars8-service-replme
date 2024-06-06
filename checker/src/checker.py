@@ -22,6 +22,7 @@ from noise import get_noise, get_random_noise
 from util import (
     create_user,
     do_user_login,
+    get_sessions,
     terminal_websocket,
     user_login,
 )
@@ -132,6 +133,9 @@ async def putnoise0(
     logger: LoggerAdapter,
 ):
     (_, _, cookies, replUuid) = await create_user(client, db, logger)
+    sessions = await get_sessions(client, cookies, logger)
+    assert_equals(len(sessions) > 0, True, "No session created")
+
     (i, noise) = get_random_noise()
     await terminal_websocket(
         task.address,
@@ -152,6 +156,8 @@ async def getnoise0(
     logger: LoggerAdapter,
 ):
     (_, _, cookies, replUuid) = await user_login(client, db, logger)
+    sessions = await get_sessions(client, cookies, logger)
+    assert_equals(len(sessions) > 0, True, "No session created")
     i = await db.get("noise_id")
     if not isinstance(i, int):
         raise MumbleException("noise_id is not a int: " + str(i))
@@ -181,6 +187,17 @@ async def havoc0(
         < 300,
         True,
         "Failed to get index.js",
+    )
+    assert_equals(
+        (await client.get("/term", follow_redirects=True)).status_code < 300,
+        True,
+        "Failed to get term.html",
+    )
+    assert_equals(
+        (await client.get("/static/js/term.js", follow_redirects=True)).status_code
+        < 300,
+        True,
+        "Failed to get term.js",
     )
     assert_equals(
         (await client.get("/static/css/style.css", follow_redirects=True)).status_code
