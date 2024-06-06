@@ -16,6 +16,8 @@ import (
 
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -27,9 +29,10 @@ type DockerService struct {
 	Context context.Context
 	Client  *client.Client
 	HostIP  string
+	ApiKey  string
 }
 
-func Docker() DockerService {
+func Docker(apiKey string) DockerService {
 	ctx := context.Background()
 
 	opts := []client.Opt{
@@ -57,6 +60,7 @@ func Docker() DockerService {
 		Context: ctx,
 		Client:  cli,
 		HostIP:  ip,
+		ApiKey:  apiKey,
 	}
 }
 
@@ -127,6 +131,7 @@ func (docker *DockerService) CreateContainer(
 		docker.Context,
 		&container.Config{
 			Image: opts.ImageTag,
+			Env:   []string{fmt.Sprintf("API_KEY=%s", docker.ApiKey)},
 		},
 		&container.HostConfig{
 			PortBindings: opts.Ports,
@@ -149,6 +154,31 @@ func (docker *DockerService) CreateContainer(
 	)
 
 	return &container, err
+}
+
+func (docker *DockerService) GetContainers(imageReference string) ([]dockerTypes.Container, error) {
+
+	images, err := docker.Client.ImageList(docker.Context, image.ListOptions{
+		All: true,
+		Filters: filters.NewArgs(filters.KeyValuePair{
+			Key:   "reference",
+			Value: imageReference,
+		}),
+	})
+
+	if err != nil || len(images) == 0 {
+		return nil, err
+	}
+
+	return docker.Client.ContainerList(docker.Context, container.ListOptions{
+		All: true,
+		Filters: filters.NewArgs(
+			filters.KeyValuePair{
+				Key:   "ancestor",
+				Value: images[0].ID,
+			},
+		),
+	})
 }
 
 func (docker *DockerService) GetContainer(name string) (
@@ -176,8 +206,53 @@ func (docker *DockerService) GetContainer(name string) (
 	return nil, nil, false
 }
 
-func (docker *DockerService) StartContainer(id string) error {
+func (docker *DockerService) VolumesPrune() (dockerTypes.VolumesPruneReport, error) {
+	return docker.Client.VolumesPrune(docker.Context, filters.NewArgs(
+		filters.KeyValuePair{
+			Key:   "all",
+			Value: "1",
+		},
+	))
+}
+
+func (docker *DockerService) StartContainerById(id string) error {
 	return docker.Client.ContainerStart(docker.Context, id, container.StartOptions{})
+}
+
+func (docker *DockerService) StartContainerByName(name string) {
+	c, _, running := docker.GetContainer(name)
+	if !running {
+		docker.Client.ContainerStart(docker.Context, c.ID, container.StartOptions{})
+	}
+}
+
+func (docker *DockerService) StopContainerById(id string) error {
+	return docker.Client.ContainerStop(docker.Context, id, container.StopOptions{})
+}
+
+func (docker *DockerService) StopContainerByName(name string) {
+	c, _, running := docker.GetContainer(name)
+	if running {
+		docker.Client.ContainerStop(docker.Context, c.ID, container.StopOptions{})
+	}
+}
+
+func (docker *DockerService) KillContainerById(id string) error {
+	return docker.Client.ContainerKill(docker.Context, id, "SIGKILL")
+}
+
+func (docker *DockerService) KillContainerByName(name string) {
+	c, _, running := docker.GetContainer(name)
+	if running {
+		docker.Client.ContainerKill(docker.Context, c.ID, "SIGKILL")
+	}
+}
+
+func (docker *DockerService) RemoveContainerById(id string) error {
+	return docker.Client.ContainerRemove(docker.Context, id, container.RemoveOptions{
+		RemoveVolumes: true,
+		Force:         true,
+	})
 }
 
 func (docker *DockerService) GetContainerAddress(id string) (*string, *uint16, error) {
@@ -222,8 +297,6 @@ func (docker *DockerService) GetContainerAddress(id string) (*string, *uint16, e
 
 func (docker *DockerService) EnsureContainerStarted(
 	name string,
-	username string,
-	password string,
 ) (*string, *uint16, error) {
 	var id string
 
@@ -257,7 +330,7 @@ func (docker *DockerService) EnsureContainerStarted(
 	}
 
 	if !running {
-		err := docker.StartContainer(id)
+		err := docker.StartContainerById(id)
 		if err != nil {
 			return nil, nil, dockerTypes.ErrorResponse{
 				Message: "Container start failed",
@@ -272,4 +345,15 @@ func (docker *DockerService) EnsureContainerStarted(
 	}
 
 	return ip, port, nil
+}
+
+func (docker *DockerService) GetContainerPort(name string) *uint16 {
+
+	container, _, running := docker.GetContainer(name)
+	if !running {
+		return nil
+	}
+	_, port, _ := docker.GetContainerAddress(container.ID)
+
+	return port
 }

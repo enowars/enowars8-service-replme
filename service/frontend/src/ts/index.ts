@@ -1,37 +1,71 @@
-import { addLogin } from "./lib";
+import { UserSessionResponseSchema } from "./lib"
 
-const form = document.querySelector("#new_container_form");
-
-async function sendData() {
-  const formData = new FormData(form as HTMLFormElement);
-
-  try {
-    const response = await fetch("/api/login/private", {
-      method: "POST",
-      body: formData,
-    });
-
-    const payload = await response.json()
-
-    if (response.ok) {
-      const username = formData.get('username') as string;
-      const password = formData.get('password') as string;
-      addLogin(username, password)
-      location.href = `/term/${username}/${payload.port}`;
-    } else {
-      document.getElementById("form_error_content")!.innerText = payload.error;
-      document.getElementById("form_error_container")?.classList.remove("hidden");
-      setTimeout(() => {
-        document.getElementById("form_error_container")?.classList.add("hidden");
-      }, 5000);
+customElements.define(
+  'session-elem',
+  class extends HTMLElement {
+    constructor() {
+      super();
+      // @ts-ignore
+      const template = document.getElementById("session-template").content;
+      const shadowRoot = this.attachShadow({ mode: "open" });
+      [
+        '/static/css/style.css',
+        '/static/fontawesome/css/fontawesome.css',
+        '/static/fontawesome/css/brands.css',
+        '/static/fontawesome/css/solid.css'
+      ].forEach((href) => {
+        const linkElem = document.createElement('link');
+        linkElem.rel = 'stylesheet';
+        linkElem.href = href;
+        shadowRoot.appendChild(linkElem);
+      })
+      shadowRoot.appendChild(template.cloneNode(true));
     }
-  } catch (e) {
-    console.error(e);
-  }
-}
+    connectedCallback() {
+      const hrefSlot = this.shadowRoot.querySelector('slot[name="href"]');
+      const dynamicLink = this.shadowRoot.getElementById('dynamic-link');
 
-form!.addEventListener("submit", (event) => {
-  event.preventDefault();
-  sendData();
-});
+      const updateHref = () => {
+        // @ts-ignore
+        const nodes = hrefSlot.assignedNodes();
+        if (nodes.length > 0) {
+          // @ts-ignore
+          dynamicLink.href = nodes[0].textContent;
+        }
+      };
+
+      hrefSlot.addEventListener('slotchange', updateHref);
+      updateHref();
+    }
+  },
+)
+
+fetch("/api/user/sessions")
+  .then((response) => response.json())
+  .then((data) => UserSessionResponseSchema.parse(data))
+  .then((names) => {
+    const container = document.getElementById("session_container")
+    names.forEach((name) => {
+
+      const session = document.createElement('session-elem');
+      const labelSlot = document.createElement('slot');
+      labelSlot.slot = "label";
+      labelSlot.innerText = name.substring(0, 10) + "...";
+      const hrefSlot = document.createElement('slot');
+      hrefSlot.slot = "href";
+      hrefSlot.innerText = "/term/" + name;
+      session.appendChild(labelSlot)
+      session.appendChild(hrefSlot)
+
+      container.appendChild(session);
+    })
+  })
+
+
+// fetch("/api/user/sessions/debug")
+//   .then((response) => response.json())
+//   .then((data) => {
+//     const container = document.getElementById("sessions_debug")
+//     container.innerText = JSON.stringify(data, null, 2)
+//   })
 

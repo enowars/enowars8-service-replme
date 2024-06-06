@@ -13,14 +13,13 @@ from enochecker3.types import (
     PutflagCheckerTaskMessage,
     PutnoiseCheckerTaskMessage,
 )
-from enochecker3.utils import FlagSearcher, assert_equals
+from enochecker3.utils import assert_equals
 from httpx import AsyncClient
 import base64
 
 from exploit import exploit0_apply_delta
 from noise import get_noise, get_random_noise
 from util import (
-    create_terminal,
     create_user,
     do_user_login,
     terminal_websocket,
@@ -41,16 +40,13 @@ async def putflag0(
     db: ChainDB,
     logger: LoggerAdapter,
 ) -> str:
-    (username, password, port) = await create_user(client, db, logger)
-    pid = await create_terminal(client, logger, username, password)
+    (username, password, cookies, replUuid) = await create_user(client, db, logger)
     flag = base64.b64encode(bytes(task.flag, "utf-8")).decode("utf-8")
     await terminal_websocket(
         task.address,
         logger,
-        username,
-        password,
-        port,
-        pid,
+        cookies,
+        replUuid,
         [
             (f'echo "{flag}" > flagstore.txt && echo OK\n', ".*\nOK.*"),
         ],
@@ -66,8 +62,7 @@ async def getflag0(
     db: ChainDB,
     logger: LoggerAdapter,
 ) -> None:
-    (username, password, port) = await user_login(client, db, logger)
-    pid = await create_terminal(client, logger, username, password)
+    (_, _, cookies, replUuid) = await user_login(client, db, logger)
     flag = (
         base64.b64encode(bytes(task.flag, "utf-8")).decode("utf-8").replace("+", "\\+")
     )
@@ -75,10 +70,8 @@ async def getflag0(
         await terminal_websocket(
             task.address,
             logger,
-            username,
-            password,
-            port,
-            pid,
+            cookies,
+            replUuid,
             [
                 ("cat flagstore.txt\n", f".*\n{flag}.*"),
             ],
@@ -109,15 +102,12 @@ async def exploit0(
 
     password = secrets.token_hex(30)
 
-    port = await do_user_login(client, logger, delta_username, password)
-    pid = await create_terminal(client, logger, delta_username, password)
+    (cookies, replUuid) = await do_user_login(client, logger, delta_username, password)
     response = await terminal_websocket(
         task.address,
         logger,
-        delta_username,
-        password,
-        port,
-        pid,
+        cookies,
+        replUuid,
         [
             (
                 f"echo FLAG && cat ../{target_username}/flagstore.txt && echo OK\n",
@@ -141,16 +131,13 @@ async def putnoise0(
     db: ChainDB,
     logger: LoggerAdapter,
 ):
-    (username, password, port) = await create_user(client, db, logger)
-    pid = await create_terminal(client, logger, username, password)
+    (_, _, cookies, replUuid) = await create_user(client, db, logger)
     (i, noise) = get_random_noise()
     await terminal_websocket(
         task.address,
         logger,
-        username,
-        password,
-        port,
-        pid,
+        cookies,
+        replUuid,
         noise[0],
     )
 
@@ -164,22 +151,16 @@ async def getnoise0(
     db: ChainDB,
     logger: LoggerAdapter,
 ):
-    (username, password, port) = await user_login(client, db, logger)
-    pid = await create_terminal(client, logger, username, password)
-
+    (_, _, cookies, replUuid) = await user_login(client, db, logger)
     i = await db.get("noise_id")
-
     if not isinstance(i, int):
         raise MumbleException("noise_id is not a int: " + str(i))
-
     noise = get_noise(i)
     await terminal_websocket(
         task.address,
         logger,
-        username,
-        password,
-        port,
-        pid,
+        cookies,
+        replUuid,
         noise[1],
     )
 
@@ -199,19 +180,19 @@ async def havoc0(
         (await client.get("/static/js/index.js", follow_redirects=True)).status_code
         < 300,
         True,
-        "Failed to get index.html",
+        "Failed to get index.js",
     )
     assert_equals(
         (await client.get("/static/css/style.css", follow_redirects=True)).status_code
         < 300,
         True,
-        "Failed to get index.html",
+        "Failed to get style.css",
     )
     assert_equals(
         (await client.get("/static/css/xterm.css", follow_redirects=True)).status_code
         < 300,
         True,
-        "Failed to get index.html",
+        "Failed to get xterm.css",
     )
 
 

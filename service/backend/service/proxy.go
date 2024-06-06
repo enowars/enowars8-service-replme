@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 
 	"replme/types"
 
@@ -19,97 +20,239 @@ type ProxyService struct {
 }
 
 type Target struct {
-	IP   string
-	Port uint16
+	IP     string
+	Port   uint16
+	ApiKey string
 }
 
-func Proxy(ip string, port uint16) ProxyService {
+func Proxy(ip string, port uint16, apiKey string) ProxyService {
 	return ProxyService{
 		Target: Target{
-			IP:   ip,
-			Port: port,
+			IP:     ip,
+			Port:   port,
+			ApiKey: apiKey,
 		},
 	}
 }
 
-func (proxy *ProxyService) SendUserCreateRequest(
-	request types.LoginRequest,
-) (*http.Response, error) {
+func (proxy *ProxyService) SendRegisterRequest(
+	request types.RegisterRequest,
+	options *types.RequestOptions,
+) (*http.Response, *types.RequestError) {
 	payload, err := json.Marshal(request)
 
 	if err != nil {
-		return nil, err
+		data, _ := json.Marshal(types.ErrorResponse{
+			Error: err.Error(),
+		})
+		return nil, &types.RequestError{
+			Code:        http.StatusBadRequest,
+			ContentType: "application/json",
+			Data:        data,
+		}
 	}
 
-	return http.Post(
-		fmt.Sprintf(
-			"http://%s:%d/user/create",
-			proxy.Target.IP,
-			proxy.Target.Port,
-		),
-		"application/json",
-		bytes.NewBuffer(payload),
-	)
-}
+	retries := 1
+	if options != nil {
+		retries = options.Retries
+	}
 
-func (proxy *ProxyService) SendUserLoginRequest(
-	request types.LoginRequest,
-) (*http.Response, error) {
-	payload, err := json.Marshal(request)
+	url := fmt.Sprintf(
+		"http://%s:%d/api/%s/auth/register",
+		proxy.Target.IP,
+		proxy.Target.Port,
+		proxy.Target.ApiKey,
+	)
+
+	var response *http.Response
+	for i := 0; i < retries; i++ {
+		response, err = http.Post(
+			url,
+			"application/json",
+			bytes.NewBuffer(payload),
+		)
+		if err == nil {
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
 
 	if err != nil {
-		return nil, err
+		data, _ := json.Marshal(types.ErrorResponse{
+			Error: err.Error(),
+		})
+		return nil, &types.RequestError{
+			Code:        http.StatusBadRequest,
+			ContentType: "application/json",
+			Data:        data,
+		}
 	}
 
-	return http.Post(
-		fmt.Sprintf(
-			"http://%s:%d/user/login",
-			proxy.Target.IP,
-			proxy.Target.Port,
-		),
-		"application/json",
-		bytes.NewBuffer(payload),
-	)
+	if response.StatusCode >= 400 {
+		payload, err := io.ReadAll(response.Body)
+		if err != nil {
+			data, _ := json.Marshal(types.ErrorResponse{
+				Error: "Container communication failed",
+			})
+			return nil, &types.RequestError{
+				Code:        http.StatusInternalServerError,
+				ContentType: "application/json",
+				Data:        data,
+			}
+		}
+		return nil, &types.RequestError{
+			Code:        response.StatusCode,
+			ContentType: "application/json",
+			Data:        payload,
+		}
+	}
+
+	return response, nil
 }
 
-func (proxy *ProxyService) SendCreateTermProcessRequest(
-	request types.CreateTermProcessRequest,
-) (*http.Response, error) {
+func (proxy *ProxyService) SendCreateTermRequest(
+	options types.RequestOptions,
+) (*http.Response, *types.RequestError) {
+
+	retries := 1
+	if options.Retries > 1 {
+		retries = options.Retries
+	}
+
 	url := fmt.Sprintf(
-		"http://%s:%d/terminals?rows=%d&cols=%d",
+		"http://%s:%d/api/%s/term",
 		proxy.Target.IP,
 		proxy.Target.Port,
-		request.Rows,
-		request.Columns,
+		proxy.Target.ApiKey,
 	)
-	req, _ := http.NewRequest("POST", url, nil)
 
-	return http.DefaultClient.Do(req)
+	var response *http.Response
+	var err error
+	for i := 0; i < retries; i++ {
+		req, _ := http.NewRequest("POST", url, nil)
+		for _, cookie := range options.Cookies {
+			req.AddCookie(cookie)
+		}
+		response, err = http.DefaultClient.Do(req)
+		if err == nil {
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	if err != nil {
+		data, _ := json.Marshal(types.ErrorResponse{
+			Error: err.Error(),
+		})
+		return nil, &types.RequestError{
+			Code:        http.StatusBadRequest,
+			ContentType: "application/json",
+			Data:        data,
+		}
+	}
+
+	if response.StatusCode >= 400 {
+		payload, err := io.ReadAll(response.Body)
+		if err != nil {
+			data, _ := json.Marshal(types.ErrorResponse{
+				Error: "Container communication failed",
+			})
+			return nil, &types.RequestError{
+				Code:        http.StatusInternalServerError,
+				ContentType: "application/json",
+				Data:        data,
+			}
+		}
+		return nil, &types.RequestError{
+			Code:        response.StatusCode,
+			ContentType: "application/json",
+			Data:        payload,
+		}
+	}
+
+	return response, nil
 }
 
-func (proxy *ProxyService) SendUpdateTermSizeRequest(
-	pid string, request types.UpdateTermSizeRequest,
-) (*http.Response, error) {
+func (proxy *ProxyService) SendResizeTermRequest(
+	request types.ResizeTermRequest,
+	options types.RequestOptions,
+) (*http.Response, *types.RequestError) {
+	payload, err := json.Marshal(request)
+	if err != nil {
+		data, _ := json.Marshal(types.ErrorResponse{
+			Error: err.Error(),
+		})
+		return nil, &types.RequestError{
+			Code:        http.StatusBadRequest,
+			ContentType: "application/json",
+			Data:        data,
+		}
+	}
+	retries := 1
+	if options.Retries > 1 {
+		retries = options.Retries
+	}
+
 	url := fmt.Sprintf(
-		"http://%s:%d/terminals/%s/size?rows=%d&cols=%d",
+		"http://%s:%d/api/%s/term/size",
 		proxy.Target.IP,
 		proxy.Target.Port,
-		pid,
-		request.Rows,
-		request.Columns,
+		proxy.Target.ApiKey,
 	)
-	req, _ := http.NewRequest("POST", url, nil)
 
-	return http.DefaultClient.Do(req)
+	var response *http.Response
+	for i := 0; i < retries; i++ {
+		req, _ := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json")
+		for _, cookie := range options.Cookies {
+			req.AddCookie(cookie)
+		}
+		response, err = http.DefaultClient.Do(req)
+		if err == nil {
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	if err != nil {
+		data, _ := json.Marshal(types.ErrorResponse{
+			Error: err.Error(),
+		})
+		return nil, &types.RequestError{
+			Code:        http.StatusBadRequest,
+			ContentType: "application/json",
+			Data:        data,
+		}
+	}
+
+	if response.StatusCode >= 400 {
+		payload, err := io.ReadAll(response.Body)
+		if err != nil {
+			data, _ := json.Marshal(types.ErrorResponse{
+				Error: "Container communication failed",
+			})
+			return nil, &types.RequestError{
+				Code:        http.StatusInternalServerError,
+				ContentType: "application/json",
+				Data:        data,
+			}
+		}
+		return nil, &types.RequestError{
+			Code:        response.StatusCode,
+			ContentType: "application/json",
+			Data:        payload,
+		}
+	}
+
+	return response, nil
 }
 
-func (proxy *ProxyService) CreateWebsocketPipe(clientConn *websocket.Conn, pid string) error {
+func (proxy *ProxyService) CreateWebsocketPipe(clientConn *websocket.Conn, cookie http.Cookie) error {
 	targetURL, err := url.Parse(
 		fmt.Sprintf(
-			"ws://%s:%d/terminals/%s",
+			"ws://%s:%d/api/%s/term",
 			proxy.Target.IP,
 			proxy.Target.Port,
-			pid,
+			proxy.Target.ApiKey,
 		),
 	)
 
@@ -117,7 +260,14 @@ func (proxy *ProxyService) CreateWebsocketPipe(clientConn *websocket.Conn, pid s
 		return err
 	}
 
-	targetConn, _, err := websocket.DefaultDialer.Dial(targetURL.String(), nil)
+	targetConn, _, err := websocket.DefaultDialer.Dial(
+		targetURL.String(),
+		http.Header{
+			"Cookie": []string{
+				cookie.String(),
+			},
+		},
+	)
 
 	if err != nil {
 		return err

@@ -3,18 +3,17 @@ import { AttachAddon } from "@xterm/addon-attach";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
-import { getPassword, sleep } from "./lib";
+import { randomString, sleep } from "./lib";
 
 const retry = 5;
 const delay = 1000;
 
-let pid: string | undefined;
+let replUuid: string | undefined;
 const protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
 
-const [username, port] = location.pathname.replace('/term/', '').split('/');
-const password = getPassword(username)
+const [__1, __2, name] = location.pathname.split('/');
 
-let socketURL = protocol + location.host + '/ws/terminal/' + port + '/';
+let socketURL = protocol + location.host + '/api/repl/';
 
 const terminal = new Terminal({
   allowProposedApi: true,
@@ -53,18 +52,17 @@ terminal.loadAddon(clipboard);
 terminal.loadAddon(fit);
 
 terminal.onResize((size: { cols: number, rows: number }) => {
-  if (!pid) {
+  if (!replUuid) {
     return;
   }
   const cols = size.cols;
   const rows = size.rows;
 
   fetch(
-    `/api/terminal/${pid}/size`,
+    `/api/repl/${replUuid}/size`,
     {
       method: 'POST',
       headers: {
-        'Authorization': 'Basic ' + btoa(username + ":" + password),
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -90,23 +88,34 @@ resizeObserver.observe(terminalContainer!);
 async function connect() {
   for (let i = 0; i < retry; i++) {
     try {
-      const res = await fetch(
-        '/api/terminal',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Basic ' + btoa(username + ":" + password),
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            cols: terminal.cols,
-            rows: terminal.rows
-          })
-        }
-      )
+      let res: Response;
+      if (name) {
+        res = await fetch(
+          '/api/repl/name/' + name,
+          {
+            method: 'POST',
+          }
+        )
+      } else {
+        const username = randomString(60);
+        const password = randomString(60);
+        res = await fetch(
+          '/api/repl',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              username,
+              password
+            })
+          }
+        )
+      }
       if (res.ok) {
-        pid = await res.text();
-        socketURL += pid;
+        replUuid = (await res.json()).replUuid;
+        socketURL += replUuid;
         const socket = new WebSocket(socketURL);
         socket.onopen = async () => {
           document.addEventListener('keydown', (event) => {
@@ -116,13 +125,9 @@ async function connect() {
               terminal.focus();
             }
           });
-          await sleep(100);
-          socket.send(`${username}\n`);
-          await sleep(100);
-          socket.send(`${password}\n`);
           terminal.loadAddon(new AttachAddon(socket));
         };
-        window.onbeforeunload = function (e: any) {
+        window.onbeforeunload = function(e: any) {
           if (e) {
             e.returnValue = 'Leave site?';
           }
