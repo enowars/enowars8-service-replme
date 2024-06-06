@@ -24,14 +24,14 @@ func (cleanup *CleanupService) DoCleanup() {
 		return
 	}
 
-	cutoffTime := time.Now().Add(-1 * time.Minute)
+	cutoffTime := time.Now().Add(-15 * time.Minute)
 
 	for _, container := range containers {
 		created := time.Unix(container.Created, 0)
 		if created.Before(cutoffTime) {
 			fmt.Println("Removing container: ", container.Names[0])
 			cleanup.Docker.RemoveContainerById(container.ID)
-			name := container.Names[0][1:]
+			name := container.Names[0][1:] // [1:] because name starts with '/'
 			cleanup.ReplState.DeleteContainer(name)
 		}
 	}
@@ -41,7 +41,7 @@ func (cleanup *CleanupService) DoCleanup() {
 
 func (cleanup *CleanupService) StartTask() *chan struct{} {
 
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(5 * time.Minute)
 	quit := make(chan struct{})
 
 	go func() {
