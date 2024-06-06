@@ -1,5 +1,5 @@
 FROM node:alpine3.19
-RUN apk add g++ make py3-pip openssl zsh mandoc man-pages
+RUN apk add g++ make py3-pip openssl zsh mandoc man-pages git
 
 WORKDIR /root/server
 
