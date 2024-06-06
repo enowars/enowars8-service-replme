@@ -1,18 +1,14 @@
 package main
 
 import (
-	"encoding/gob"
 	"flag"
 	"os"
 
 	"replme/server"
 	"replme/service"
-	"replme/types"
 )
 
 func main() {
-	gob.Register(types.Containers{})
-
 	var distPath string
 	var imagePath string
 

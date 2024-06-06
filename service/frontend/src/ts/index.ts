@@ -1,37 +1,60 @@
-// import { addLogin } from "./lib";
-//
-// const form = document.querySelector("#new_container_form");
-//
-// async function sendData() {
-//   const formData = new FormData(form as HTMLFormElement);
-//
-//   try {
-//     const response = await fetch("/api/login/private", {
-//       method: "POST",
-//       body: formData,
-//     });
-//
-//     const payload = await response.json()
-//
-//     if (response.ok) {
-//       const username = formData.get('username') as string;
-//       const password = formData.get('password') as string;
-//       addLogin(username, password)
-//       location.href = `/term/${username}/${payload.port}`;
-//     } else {
-//       document.getElementById("form_error_content")!.innerText = payload.error;
-//       document.getElementById("form_error_container")?.classList.remove("hidden");
-//       setTimeout(() => {
-//         document.getElementById("form_error_container")?.classList.add("hidden");
-//       }, 5000);
-//     }
-//   } catch (e) {
-//     console.error(e);
-//   }
-// }
-//
-// form!.addEventListener("submit", (event) => {
-//   event.preventDefault();
-//   sendData();
-// });
+import { UserSessionResponseSchema } from "./lib"
+
+fetch("/api/user/sessions")
+  .then((response) => response.json())
+  .then((data) => UserSessionResponseSchema.parse(data))
+  .then((names) => {
+    const container = document.getElementById("session_container")
+    names.forEach((name) => {
+
+      const row = document.createElement('div')
+      row.classList.add(
+        'flex',
+        'flex-row',
+        'w-full',
+        'justify-between'
+      )
+
+      const label = document.createElement('div')
+      label.innerText = name.substring(0, 10);
+
+      const link = document.createElement('a')
+      link.href = "/term/" + name
+      link.classList.add(
+        "rounded",
+        "bg-indigo-600",
+        "px-2",
+        "py-1",
+        "font-semibold",
+        "text-white",
+        "shadow-sm",
+        "hover:bg-indigo-500",
+        "focus-visible:outline",
+        "focus-visible:outline-2",
+        "focus-visible:outline-offset-2",
+        "focus-visible:outline-indigo-600"
+      )
+
+      const icon = document.createElement('i')
+      icon.classList.add(
+        'fa-solid',
+        'fa-arrow-right'
+      )
+
+      link.appendChild(icon);
+
+      row.appendChild(label);
+      row.appendChild(link);
+
+      container.appendChild(row)
+    })
+  })
+
+
+fetch("/api/user/sessions/debug")
+  .then((response) => response.json())
+  .then((data) => {
+    const container = document.getElementById("sessions_debug")
+    container.innerText = JSON.stringify(data, null, 2)
+  })
 

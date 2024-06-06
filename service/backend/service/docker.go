@@ -179,8 +179,33 @@ func (docker *DockerService) GetContainer(name string) (
 	return nil, nil, false
 }
 
-func (docker *DockerService) StartContainer(id string) error {
+func (docker *DockerService) StartContainerById(id string) error {
 	return docker.Client.ContainerStart(docker.Context, id, container.StartOptions{})
+}
+
+func (docker *DockerService) StartContainerByName(name string) {
+	c, _, running := docker.GetContainer(name)
+	if !running {
+		docker.Client.ContainerStart(docker.Context, c.ID, container.StartOptions{})
+	}
+}
+
+func (docker *DockerService) StopContainerById(id string) error {
+	return docker.Client.ContainerStop(docker.Context, id, container.StopOptions{})
+}
+
+func (docker *DockerService) KillContainerByName(name string) {
+	c, _, running := docker.GetContainer(name)
+	if running {
+		docker.Client.ContainerKill(docker.Context, c.ID, "SIGKILL")
+	}
+}
+
+func (docker *DockerService) StopContainerByName(name string) {
+	c, _, running := docker.GetContainer(name)
+	if running {
+		docker.Client.ContainerStop(docker.Context, c.ID, container.StopOptions{})
+	}
 }
 
 func (docker *DockerService) GetContainerAddress(id string) (*string, *uint16, error) {
@@ -258,7 +283,7 @@ func (docker *DockerService) EnsureContainerStarted(
 	}
 
 	if !running {
-		err := docker.StartContainer(id)
+		err := docker.StartContainerById(id)
 		if err != nil {
 			return nil, nil, dockerTypes.ErrorResponse{
 				Message: "Container start failed",

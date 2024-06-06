@@ -1,121 +1,77 @@
 import { RequestHandler } from "express";
 import { WebsocketRequestHandler } from "express-ws";
-import WebSocket from "ws";
-import * as pty from "node-pty";
-
-const terminals = {};
-const unsentOutput = {};
-const temporaryDisposable = {};
+import TermService from "../service/term-service";
+import { UserServiceError } from "../types/error";
+import { ResizeTermScheme } from "../types/request";
 
 const create: RequestHandler = (req, res) => {
-  const env: { [key: string]: string } = {};
-  for (const k of Object.keys(process.env)) {
-    const v = process.env[k];
-    if (v) {
-      env[k] = v;
+  const user = req.session.user!;
+  if (user.session) {
+    res.status(409)
+    res.send({ error: "Session exists" });
+  }
+  try {
+    const uuid = TermService.create(req.session.user.username);
+    user.session = uuid;
+    res.status(201);
+    res.end();
+  } catch (error) {
+    if (error instanceof UserServiceError) {
+      res.status(error.code);
+      res.send({ error: error.message });
+      return;
+    } else {
+      res.status(500);
+      res.send({ error: "Internal server error" });
+      return;
     }
   }
-  env['COLORTERM'] = 'truecolor';
-  if (typeof req.query.cols !== 'string' || typeof req.query.rows !== 'string') {
-    console.error({ req });
-    throw new Error('Unexpected query args');
-  }
-  const cols = parseInt(req.query.cols);
-  const rows = parseInt(req.query.rows);
-  const term = pty.spawn('login', [], {
-    name: 'xterm-256color',
-    cols: cols ?? 80,
-    rows: rows ?? 24,
-    cwd: env.PWD,
-    env,
-    encoding: null,
-  });
-
-  console.log('Created terminal with PID: ' + term.pid);
-  terminals[term.pid] = term;
-  unsentOutput[term.pid] = '';
-  temporaryDisposable[term.pid] = term.onData(function(data) {
-    unsentOutput[term.pid] += data;
-  });
-  res.send(term.pid.toString());
-  res.end();
 }
 
 const resize: RequestHandler = (req, res) => {
-  if (typeof req.query.cols !== 'string' || typeof req.query.rows !== 'string') {
-    console.error({ req });
-    throw new Error('Unexpected query args');
+  const user = req.session.user!;
+  let schema = ResizeTermScheme.safeParse(req.body);
+  if (!schema.success) {
+    res.status(400)
+    res.send({ error: "Invalid input" });
+    return;
   }
-  const pid = parseInt(req.params.pid);
-  const cols = parseInt(req.query.cols);
-  const rows = parseInt(req.query.rows);
-  const term = terminals[pid];
+  let body = schema.data;
 
-  term.resize(cols, rows);
-  console.log('Resized terminal ' + pid + ' to ' + cols + ' cols and ' + rows + ' rows.');
+  let uuid = user.session;
+  if (uuid === undefined || typeof uuid !== 'string') {
+    res.status(400)
+    res.send({ error: "Session invalid or not existent" });
+    return;
+  }
+
+  TermService.resize(uuid, { cols: body.cols!, rows: body.rows! });
+  res.status(200);
   res.end();
 }
 
-const websocket: WebsocketRequestHandler = (ws, req) => {
-  const term = terminals[parseInt(req.params.pid)];
-  console.log('Connected to terminal ' + term.pid);
-  temporaryDisposable[term.pid].dispose();
-  delete temporaryDisposable[term.pid];
-  ws.send(unsentOutput[term.pid]);
-  delete unsentOutput[term.pid];
-
-  let userInput = false;
-
-  function bufferUtf8(socket: WebSocket, timeout: number, maxSize: number) {
-    const chunks = [];
-    let length = 0;
-    let sender = null;
-    return (data: any) => {
-      chunks.push(data);
-      length += data.length;
-      if (length > maxSize || userInput) {
-        userInput = false;
-        socket.send(Buffer.concat(chunks));
-        chunks.length = 0;
-        length = 0;
-        if (sender) {
-          clearTimeout(sender);
-          sender = null;
-        }
-      } else if (!sender) {
-        sender = setTimeout(() => {
-          socket.send(Buffer.concat(chunks));
-          chunks.length = 0;
-          length = 0;
-          sender = null;
-        }, timeout);
-      }
-    };
+const ws: WebsocketRequestHandler = (ws, req) => {
+  const user = req.session.user!;
+  let uuid = user.session;
+  if (uuid === undefined || typeof uuid !== 'string') {
+    console.log("[ERROR] Session invalid or not existent");
+    ws.close();
+    return;
   }
-  const send = bufferUtf8(ws, 3, 262144);
-
-  term.onData(function(data: any) {
-    try {
-      send(data);
-    } catch (error) {
-      // websocket is not open, ignore
-    }
-  });
-  ws.on('message', function(msg) {
-    term.write(msg);
-    userInput = true;
-  });
-  ws.on('close', function() {
-    term.kill('SIGKILL');
-    console.log('Closed terminal ' + term.pid);
-    delete terminals[term.pid];
-  });
+  try {
+    TermService.ws(uuid, ws, () => {
+      user.session = undefined;
+    })
+  } catch (error) {
+    console.log("[ERROR]", error);
+    ws.close();
+  }
 }
 
 const TermController = {
   create,
   resize,
-  websocket
+  ws
 }
 
 export default TermController;

@@ -5,7 +5,6 @@ import (
 	"path"
 
 	"replme/controller"
-	"replme/middleware"
 	"replme/service"
 	"replme/util"
 
@@ -16,8 +15,9 @@ import (
 
 func NewRouter(docker *service.DockerService, dist string) *gin.Engine {
 
-	terminalController := controller.NewTerminalController(docker)
-	replController := controller.NewReplController(docker)
+	replState := service.ReplState()
+	userController := controller.NewUserController(&replState)
+	replController := controller.NewReplController(docker, &replState)
 
 	engine := gin.Default()
 
@@ -36,34 +36,26 @@ func NewRouter(docker *service.DockerService, dist string) *gin.Engine {
 		ctx.HTML(http.StatusOK, "term.html", gin.H{})
 	})
 
+	engine.GET("/term/:name", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "term.html", gin.H{})
+	})
+
 	/////////////////////// API ///////////////////////
 
-	engine.POST(
-		"/api/login/private",
-		terminalController.EnsureUser,
-	)
 	engine.GET(
-		"/ws/terminal/:port/:pid",
-		terminalController.CreateWebsocketProxy,
+		"/api/user/sessions", userController.Sessions,
 	)
 
-	term := engine.Group(
-		"/api/terminal",
-		middleware.AuthMiddleware(docker),
+	engine.GET(
+		"/api/user/sessions/debug", userController.SessionsDebug,
 	)
-	term.POST(
-		"/",
-		terminalController.CreateTerminal,
-	)
-	term.POST(
-		"/:pid/size",
-		terminalController.ResizeTerminal,
-	)
-
-	////////////////////// APIV2 //////////////////////
 
 	engine.POST(
 		"/api/repl", replController.Create,
+	)
+
+	engine.POST(
+		"/api/repl/name/:name", replController.CreateFromName,
 	)
 
 	engine.GET(

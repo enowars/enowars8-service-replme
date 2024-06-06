@@ -11,8 +11,7 @@ const delay = 1000;
 let replUuid: string | undefined;
 const protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
 
-const username = randomString(60);
-const password = randomString(60);
+const [__1, __2, name] = location.pathname.split('/');
 
 let socketURL = protocol + location.host + '/api/repl/';
 
@@ -89,19 +88,31 @@ resizeObserver.observe(terminalContainer!);
 async function connect() {
   for (let i = 0; i < retry; i++) {
     try {
-      const res = await fetch(
-        '/api/repl',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            username,
-            password
-          })
-        }
-      )
+      let res: Response;
+      if (name) {
+        res = await fetch(
+          '/api/repl/name/' + name,
+          {
+            method: 'POST',
+          }
+        )
+      } else {
+        const username = randomString(60);
+        const password = randomString(60);
+        res = await fetch(
+          '/api/repl',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              username,
+              password
+            })
+          }
+        )
+      }
       if (res.ok) {
         replUuid = (await res.json()).replUuid;
         socketURL += replUuid;
@@ -114,10 +125,6 @@ async function connect() {
               terminal.focus();
             }
           });
-          // await sleep(100);
-          // socket.send(`${username}\n`);
-          // await sleep(100);
-          // socket.send(`${password}\n`);
           terminal.loadAddon(new AttachAddon(socket));
         };
         window.onbeforeunload = function(e: any) {
