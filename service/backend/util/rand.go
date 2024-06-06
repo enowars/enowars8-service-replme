@@ -3,9 +3,10 @@ package util
 import (
 	"crypto/rand"
 	"math/big"
+	"os"
 )
 
-const LETTERS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-"
+const LETTERS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 func RandomBytes(n int) ([]byte, error) {
 	b := make([]byte, n)
@@ -28,4 +29,18 @@ func RandomString(n int) (string, error) {
 	}
 
 	return string(ret), nil
+}
+
+func ApiKey(path string) string {
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		apikey, _ := RandomString(64)
+		err := os.WriteFile(path, []byte(apikey), 0600)
+		if err != nil {
+			panic(err)
+		}
+		return apikey
+	}
+
+	return string(bytes)
 }

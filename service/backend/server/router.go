@@ -46,9 +46,9 @@ func NewRouter(docker *service.DockerService, dist string) *gin.Engine {
 		"/api/user/sessions", userController.Sessions,
 	)
 
-	engine.GET(
-		"/api/user/sessions/debug", userController.SessionsDebug,
-	)
+	// engine.GET(
+	// 	"/api/user/sessions/debug", userController.SessionsDebug,
+	// )
 
 	engine.POST(
 		"/api/repl", replController.Create,

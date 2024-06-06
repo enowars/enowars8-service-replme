@@ -10,6 +10,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - docker-cert:/cert
+      - api-key:/apikey
     environment:
       - DOCKER_CERT_PATH=/cert/client
       - DOCKER_TLS_VERIFY=true
