@@ -16,6 +16,8 @@ import (
 
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -154,6 +156,31 @@ func (docker *DockerService) CreateContainer(
 	return &container, err
 }
 
+func (docker *DockerService) GetContainers(imageReference string) ([]dockerTypes.Container, error) {
+
+	images, err := docker.Client.ImageList(docker.Context, image.ListOptions{
+		All: true,
+		Filters: filters.NewArgs(filters.KeyValuePair{
+			Key:   "reference",
+			Value: imageReference,
+		}),
+	})
+
+	if err != nil || len(images) == 0 {
+		return nil, err
+	}
+
+	return docker.Client.ContainerList(docker.Context, container.ListOptions{
+		All: true,
+		Filters: filters.NewArgs(
+			filters.KeyValuePair{
+				Key:   "ancestor",
+				Value: images[0].ID,
+			},
+		),
+	})
+}
+
 func (docker *DockerService) GetContainer(name string) (
 	*dockerTypes.Container,
 	*dockerTypes.ContainerJSON,
@@ -179,6 +206,15 @@ func (docker *DockerService) GetContainer(name string) (
 	return nil, nil, false
 }
 
+func (docker *DockerService) VolumesPrune() (dockerTypes.VolumesPruneReport, error) {
+	return docker.Client.VolumesPrune(docker.Context, filters.NewArgs(
+		filters.KeyValuePair{
+			Key:   "all",
+			Value: "1",
+		},
+	))
+}
+
 func (docker *DockerService) StartContainerById(id string) error {
 	return docker.Client.ContainerStart(docker.Context, id, container.StartOptions{})
 }
@@ -194,6 +230,17 @@ func (docker *DockerService) StopContainerById(id string) error {
 	return docker.Client.ContainerStop(docker.Context, id, container.StopOptions{})
 }
 
+func (docker *DockerService) StopContainerByName(name string) {
+	c, _, running := docker.GetContainer(name)
+	if running {
+		docker.Client.ContainerStop(docker.Context, c.ID, container.StopOptions{})
+	}
+}
+
+func (docker *DockerService) KillContainerById(id string) error {
+	return docker.Client.ContainerKill(docker.Context, id, "SIGKILL")
+}
+
 func (docker *DockerService) KillContainerByName(name string) {
 	c, _, running := docker.GetContainer(name)
 	if running {
@@ -201,11 +248,11 @@ func (docker *DockerService) KillContainerByName(name string) {
 	}
 }
 
-func (docker *DockerService) StopContainerByName(name string) {
-	c, _, running := docker.GetContainer(name)
-	if running {
-		docker.Client.ContainerStop(docker.Context, c.ID, container.StopOptions{})
-	}
+func (docker *DockerService) RemoveContainerById(id string) error {
+	return docker.Client.ContainerRemove(docker.Context, id, container.RemoveOptions{
+		RemoveVolumes: true,
+		Force:         true,
+	})
 }
 
 func (docker *DockerService) GetContainerAddress(id string) (*string, *uint16, error) {

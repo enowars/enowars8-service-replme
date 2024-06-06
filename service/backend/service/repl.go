@@ -103,3 +103,9 @@ func (repl *ReplStateService) DeleteReplSession(sessionId string, name string, r
 		}
 	}
 }
+
+func (repl *ReplStateService) DeleteContainer(name string) {
+	for _, containers := range repl.Map {
+		delete(containers, name)
+	}
+}

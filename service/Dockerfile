@@ -11,5 +11,5 @@ RUN go build -C backend -o out/main
 
 EXPOSE 6969/tcp
 
-ENTRYPOINT ["./backend/out/main", "-d", "./frontend/out", "-i", "./image"]
+ENTRYPOINT ["./backend/out/main", "-d", "./frontend/out", "-i", "./image", "-k", "/apikey/key.txt"]
 

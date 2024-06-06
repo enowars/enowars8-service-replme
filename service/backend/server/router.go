@@ -19,6 +19,10 @@ func NewRouter(docker *service.DockerService, dist string) *gin.Engine {
 	userController := controller.NewUserController(&replState)
 	replController := controller.NewReplController(docker, &replState)
 
+	cleanup := service.Cleanup(docker, &replState)
+	cleanup.DoCleanup()
+	cleanup.StartTask()
+
 	engine := gin.Default()
 
 	secret, _ := util.RandomBytes(64)
