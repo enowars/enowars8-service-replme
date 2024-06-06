@@ -32,4 +32,5 @@ services:
 
 volumes:
   docker-cert:
+  api-key:
 
