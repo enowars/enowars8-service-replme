@@ -1,6 +1,21 @@
 <layout src="layout/root-layout.html">
   <layout src="layout/panel-layout.html">
+
     <script src="/static/js/index.js" defer></script>
+
+    <template id="session-template">
+      <slot name="href" style="display: none;" />
+      <div class="flex flex-row w-full justify-between items-center font-mono">
+        <div>
+          <slot name="label">LABEL</slot>
+        </div>
+        <a id="dynamic-link"
+          class="rounded bg-green-600 px-2 py-1 font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600">
+          <i class="fa-solid fa-arrow-right" />
+        </a>
+      </div>
+    </template>
+
     <div class="text-3xl pb-6">replme</div>
     <a href="/term"
       class="rounded bg-indigo-600 px-2 py-1 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
