@@ -32,6 +32,16 @@ func NewRouter(docker *service.DockerService, dist string) *gin.Engine {
 	engine.Static("/static", path.Join(dist, "static"))
 	engine.LoadHTMLGlob(path.Join(dist, "*.html"))
 
+	engine.Use(func(ctx *gin.Context) {
+		session := sessions.Default(ctx)
+		temp_auth := session.Get("temp_auth")
+		if temp_auth == nil {
+			session.Set("temp_auth", true)
+			session.Save()
+		}
+		ctx.Next()
+	})
+
 	engine.GET("/", func(ctx *gin.Context) {
 		ctx.HTML(http.StatusOK, "index.html", gin.H{})
 	})

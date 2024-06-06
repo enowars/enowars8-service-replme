@@ -2,7 +2,6 @@ import string
 import random
 import asyncio
 import base64
-import secrets
 import re
 from logging import LoggerAdapter
 from typing import List, Optional
@@ -11,20 +10,20 @@ import websockets
 from enochecker3.chaindb import ChainDB
 from enochecker3.types import MumbleException
 from enochecker3.utils import assert_equals
-from httpx import AsyncClient, Response
+from httpx import AsyncClient, Cookies, Response
 
 
 async def create_user(
     client: AsyncClient,
     db: ChainDB,
     logger: LoggerAdapter,
-) -> tuple[str, str, str]:
+) -> tuple[str, str, Cookies, str]:
     username = "".join(random.choice(string.ascii_lowercase) for _ in range(60))
-    password = secrets.token_hex(30)
+    password = "".join(random.choice(string.ascii_lowercase) for _ in range(60))
 
     logger.info(f"Creating user: {username}:{password}")
     response = await client.post(
-        "/api/login/private",
+        "/api/repl",
         data={"username": username, "password": password},
         follow_redirects=True,
     )
@@ -33,21 +32,20 @@ async def create_user(
     assert_equals(response.status_code < 300, True, "Creating user failed")
 
     json = response.json()
-    port = str(json["port"])
-    assert_equals(port is not None, True, "Did not receive a port")
-    logger.info(f"Port: {port}")
+    replUuid = json["replUuid"]
+    assert_equals(replUuid is not None, True, "Did not receive a replUuid")
+    logger.info(f"Port: {replUuid}")
 
     await db.set("credentials", (username, password))
 
-    return (username, password, port)
+    return (username, password, response.cookies, replUuid)
 
 
 async def do_user_login(
     client: AsyncClient, logger: LoggerAdapter, username: str, password: str
-) -> str:
-    logger.info(f"Login user: {username}:{password}")
+) -> tuple[Cookies, str]:
     response = await client.post(
-        "/api/login/private",
+        "/api/repl",
         data={"username": username, "password": password},
         follow_redirects=True,
     )
@@ -56,24 +54,26 @@ async def do_user_login(
     assert_equals(response.status_code < 300, True, "Creating user failed")
 
     json = response.json()
-    port = str(json["port"])
-    assert_equals(port is not None, True, "Did not receive a port")
-    logger.info(f"Port: {port}")
+    replUuid = json["replUuid"]
+    assert_equals(replUuid is not None, True, "Did not receive a replUuid")
+    logger.info(f"Port: {replUuid}")
 
-    return port
+    return (response.cookies, replUuid)
 
 
 async def user_login(
     client: AsyncClient,
     db: ChainDB,
     logger: LoggerAdapter,
-) -> tuple[str, str, str]:
+) -> tuple[str, str, Cookies, str]:
     try:
         (username, password) = await db.get("credentials")
     except KeyError:
         raise MumbleException("Missing database entry from putflag")
 
-    return (username, password, await do_user_login(client, logger, username, password))
+    (cookies, replUuid) = await do_user_login(client, logger, username, password)
+
+    return (username, password, cookies, replUuid)
 
 
 async def create_terminal(
@@ -149,16 +149,16 @@ async def terminal_login(
 async def terminal_websocket(
     address: str,
     logger: LoggerAdapter,
-    username: str,
-    password: str,
-    port: str,
-    pid: str,
+    cookies: Cookies,
+    replUuid: str,
     actions: List[tuple[str, str]],
 ):
-    url = f"ws://{address}:6969/ws/terminal/{port}/{pid}"
+    url = f"ws://{address}:6969/api/repl/{replUuid}"
     response = ""
-    async with websockets.connect(url) as websocket:
-        await terminal_login(logger, websocket, username, password)
+    async with websockets.connect(
+        url, extra_headers={"Cookie": f"session={cookies.get("session")}"}
+    ) as websocket:
+        await websocket_recv_until(websocket, ".*%.*")
         for action in actions:
             logger.info("Sending: " + str(action[0].encode("utf-8")))
             await websocket.send(action[0])

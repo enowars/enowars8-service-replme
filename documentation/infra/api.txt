@@ -5,15 +5,14 @@ Try it out    Browse
 
 server
 ======
+GET  /api/user/sessions
+               => [ string ]
 POST /api/repl { username: "string", password: "string" }
-        - create container
-            => inject api-token
-        - start  container
-        - POST /api/auth/register => sessionId
-        - Create replId
-            => { name, sessionId }
-WS   /api/repl/:replId
-POST /api/repl/:replId/size
+               => { replUuid: uuid }
+POST /api/repl/name/:name
+               => { replUuid: uuid }
+WS   /api/repl/:replUuid
+POST /api/repl/:replUuid/size
 
 image
 =====

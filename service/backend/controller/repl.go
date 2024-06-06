@@ -6,6 +6,7 @@ import (
 	"replme/service"
 	"replme/types"
 	"replme/util"
+	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -228,9 +229,12 @@ func (repl *ReplController) Websocket(ctx *gin.Context) {
 			*name,
 			replUuid,
 		)
-		if !repl.ReplState.HasActiveReplSessions(session.ID(), *name) {
-			repl.Docker.KillContainerByName(*name)
-		}
+		go func() {
+			time.Sleep(30 * time.Second)
+			if !repl.ReplState.HasActiveReplSessions(session.ID(), *name) {
+				repl.Docker.KillContainerByName(*name)
+			}
+		}()
 	}()
 	defer clientConn.Close()
 	err = p.CreateWebsocketPipe(clientConn, *cookie)
