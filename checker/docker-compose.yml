@@ -17,7 +17,10 @@ services:
   replme-mongo:
     image: mongo
     volumes:
-      - ./data:/data/db
+      - checker-db:/data/db
     environment:
       MONGO_INITDB_ROOT_USERNAME: replme_checker
       MONGO_INITDB_ROOT_PASSWORD: replme_checker
+
+volumes:
+  checker-db:

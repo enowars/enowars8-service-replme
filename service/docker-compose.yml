@@ -27,10 +27,12 @@ services:
     restart: "unless-stopped"
     volumes:
       - docker-cert:/certs
-      - ./data/docker:/var/lib/docker
-      - ./data/:/app/data/
+      - docker-data:/var/lib/docker
+      - app-data:/app/data/
 
 volumes:
   docker-cert:
+  docker-data:
+  app-data:
   api-key:
 
