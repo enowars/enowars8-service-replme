@@ -110,7 +110,7 @@ async def websocket_recv_until(
     match = None
 
     while match is None:
-        msg = await asyncio.wait_for(websocket.recv(), timeout=0.5)
+        msg = await asyncio.wait_for(websocket.recv(), timeout=2.3)
         if isinstance(msg, bytes):
             payload += msg.decode("utf-8")
         elif isinstance(msg, str):
@@ -133,8 +133,9 @@ async def terminal_websocket(
 ):
     url = f"ws://{address}:6969/api/repl/{replUuid}"
     response = ""
+    cookie = cookies.get("session")
     async with websockets.connect(
-        url, extra_headers={"Cookie": f"session={cookies.get("session")}"}
+        url, extra_headers={"Cookie": f"session={cookie}"}
     ) as websocket:
         await websocket_recv_until(websocket, ".*%.*")
         for action in actions:

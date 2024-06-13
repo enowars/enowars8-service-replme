@@ -1,5 +1,5 @@
 {
-  description = "repl.me";
+  description = "replme";
 
   inputs.poetry2nix.url = "github:nix-community/poetry2nix";
 

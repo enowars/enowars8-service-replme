@@ -158,7 +158,10 @@ async def getnoise0(
     (_, _, cookies, replUuid) = await user_login(client, db, logger)
     sessions = await get_sessions(client, cookies, logger)
     assert_equals(len(sessions) > 0, True, "No session created")
-    i = await db.get("noise_id")
+    try:
+        i = await db.get("noise_id")
+    except:
+        raise MumbleException("noise_id not present in chaindb")
     if not isinstance(i, int):
         raise MumbleException("noise_id is not a int: " + str(i))
     noise = get_noise(i)

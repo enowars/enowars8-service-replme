@@ -1,4 +1,4 @@
-FROM python:3
+FROM python:3.11.9
 
 RUN useradd -ms /bin/bash -u 1000 checker
 
@@ -7,9 +7,7 @@ RUN apt update -y
 USER checker
 WORKDIR /checker
 
-COPY pyproject.toml .
-COPY poetry.lock .
-
+COPY ./pyproject.toml ./poetry.lock .
 RUN pip install poetry
 RUN python -m poetry install
 
