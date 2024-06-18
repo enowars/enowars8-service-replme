@@ -32,5 +32,4 @@ func main() {
 	docker.BuildImage(imagePath, imageTag)
 
 	server.Init(&docker, distPath)
-
 }

@@ -12,6 +12,83 @@ from enochecker3.utils import assert_equals
 from httpx import AsyncClient, Cookies
 
 
+class ShellCommand:
+    _cmd: str
+    ok: str
+    err: str
+
+    def __init__(self, _cmd: str, ok: str, err: str) -> None:
+        self.cmd = _cmd
+        self.ok = ok
+        self.err = err
+
+    @property
+    def cmd(self) -> str:
+        return self._cmd + "\n"
+
+    @cmd.setter
+    def cmd(self, _cmd):
+        self._cmd = _cmd
+
+
+class ShellCommandErrorBuilder:
+    cmd: str
+    ok: str
+
+    def __init__(self, cmd: str, ok: str) -> None:
+        self.cmd = cmd
+        self.ok = ok
+
+    def err(self) -> ShellCommand:
+        return ShellCommand(self.cmd + ' || echo "\\nERROR"', self.ok, ".*\nERROR.*")
+
+    def errext(self) -> ShellCommand:
+        return ShellCommand(
+            self.cmd + ' && echo "\\nERROR" || echo "\\nERROR"', self.ok, ".*\nERROR.*"
+        )
+
+    def fail(self, err: str, suffix="") -> ShellCommand:
+        return ShellCommand(self.cmd + suffix, self.ok, err)
+
+    def default(self) -> ShellCommand:
+        return self.err()
+
+
+class ShellCommandBuilder:
+    cmd: str
+
+    def __init__(self, cmd: str) -> None:
+        self.cmd = cmd
+
+    def ok(self) -> ShellCommandErrorBuilder:
+        return ShellCommandErrorBuilder(self.cmd + ' && echo "\\nOK"', ".*\nOK.*")
+
+    def expect(self, ok: str, suffix="") -> ShellCommandErrorBuilder:
+        return ShellCommandErrorBuilder(self.cmd + suffix, ok)
+
+    def default(self) -> ShellCommand:
+        return self.ok().err()
+
+
+def sh(cmd: str):
+    return ShellCommandBuilder(cmd)
+
+
+class ShellCommandChain:
+    command_chain: List[ShellCommand]
+    validation_chain: List[ShellCommand]
+
+    def __init__(
+        self, cmds: List[ShellCommand], validations: List[ShellCommand]
+    ) -> None:
+        self.command_chain = cmds
+        self.validation_chain = validations
+
+
+def shchain(cmds: List[ShellCommand] = [], validations: List[ShellCommand] = []):
+    return ShellCommandChain(cmds, validations)
+
+
 async def create_user(
     client: AsyncClient,
     db: ChainDB,
@@ -103,14 +180,15 @@ async def get_sessions(
 
 async def websocket_recv_until(
     websocket: websockets.WebSocketClientProtocol,
-    pattern: str,
+    expected: str,
+    unexpected: Optional[str],
     logger: Optional[LoggerAdapter] = None,
 ) -> str:
     payload = ""
     match = None
 
     while match is None:
-        msg = await asyncio.wait_for(websocket.recv(), timeout=2.3)
+        msg = await asyncio.wait_for(websocket.recv(), timeout=5)
         if isinstance(msg, bytes):
             payload += msg.decode("utf-8")
         elif isinstance(msg, str):
@@ -119,7 +197,13 @@ async def websocket_recv_until(
             raise MumbleException("Websocket connection recv returned unexpected data")
         if logger is not None:
             logger.info("PAYLOAD: " + payload)
-        match = re.match(pattern, payload, re.S)
+        match = re.match(expected, payload, re.S)
+        if (
+            match is None
+            and unexpected is not None
+            and re.match(unexpected, payload, re.S) is not None
+        ):
+            raise MumbleException("Received unexpected input")
 
     return payload
 
@@ -129,7 +213,7 @@ async def terminal_websocket(
     logger: LoggerAdapter,
     cookies: Cookies,
     replUuid: str,
-    actions: List[tuple[str, str]],
+    actions: List[ShellCommand],
 ):
     url = f"ws://{address}:6969/api/repl/{replUuid}"
     response = ""
@@ -137,12 +221,14 @@ async def terminal_websocket(
     async with websockets.connect(
         url, extra_headers={"Cookie": f"session={cookie}"}
     ) as websocket:
-        await websocket_recv_until(websocket, ".*%.*")
+        await websocket_recv_until(websocket, ".*%.*", None)
         for action in actions:
-            logger.info("Sending: " + str(action[0].encode("utf-8")))
-            await websocket.send(action[0])
-            logger.info("Expecting: " + str(action[1].encode("utf-8")))
-            _response = await websocket_recv_until(websocket, action[1], logger)
+            logger.info("Sending: " + str(action.cmd.encode("utf-8")))
+            await websocket.send(action.cmd)
+            logger.info("Expecting: " + str(action.ok.encode("utf-8")))
+            _response = await websocket_recv_until(
+                websocket, action.ok, action.err, logger
+            )
             logger.info("Got: " + _response)
             response += _response
 

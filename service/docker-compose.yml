@@ -14,6 +14,7 @@ services:
     environment:
       - DOCKER_CERT_PATH=/cert/client
       - DOCKER_TLS_VERIFY=true
+      - REPL_LOG=debug
     ports:
       - 6969:6969
     restart: "unless-stopped"

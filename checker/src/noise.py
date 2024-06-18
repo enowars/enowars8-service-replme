@@ -1,216 +1,233 @@
 from random import randrange
 
-NOISE = [
-    (
-        [  # pseudo-user #1
-            ('echo "#include <stdio.h>" > main.c && echo OK\n', ".*\nOK.*"),
-            ('echo "int main() {" >> main.c && echo OK\n', ".*\nOK.*"),
-            (
-                "echo '    printf(\"Hello World!\\\\n\");' >> main.c && echo OK\n",
-                ".*\nOK.*",
-            ),
-            ('echo "    return 0;" >> main.c && echo OK\n', ".*\nOK.*"),
-            ('echo "}" >> main.c && echo OK\n', ".*\nOK.*"),
-            ("gcc -o main main.c && echo OK\n", ".*\nOK.*"),
-            ("./main\n", ".*\nHello World!.*"),
+from util import ShellCommandChain, shchain, sh
+
+NOISE: list[ShellCommandChain] = [
+    shchain(
+        cmds=[
+            sh('echo "#include <stdio.h>" > main.c').default(),
+            sh('echo "int main() {" >> main.c').default(),
+            sh("echo '    printf(\"Hello World!\\\\n\");' >> main.c").default(),
+            sh('echo "    return 0;" >> main.c').default(),
+            sh('echo "}" >> main.c').default(),
+            sh("gcc -o main main.c").default(),
+            sh("./main").expect(".*\nHello World!.*").default(),
         ],
-        [  # validation #1
-            ("gcc -o main main.c && echo OK\n", ".*\nOK.*"),
-            ("./main\n", ".*\nHello World!.*"),
-        ],
-    ),
-    (
-        [  # pseudo-user #2
-            ("mkdir docs && echo OK\n", ".*\nOK.*"),
-            ("cd docs && echo OK\n", ".*\nOK.*"),
-            ("ls -lah && echo OK\n", ".*\nOK.*"),
-            ('echo "And I say hey" && echo OK\n', ".*\nOK.*"),
-            ('echo "What\'s going on" && echo OK\n', ".*\nOK.*"),
-            ("touch 4-non-blondes.txt && echo OK\n", ".*\nOK.*"),
-            ('echo "HEY, YEAH, YEAH" >> 4-non-blondes.txt && echo OK\n', ".*\nOK.*"),
-        ],
-        [  # validation #2
-            ("cd docs && echo OK\n", ".*\nOK.*"),
-            ("cat 4-non-blondes.txt\n", ".*\nHEY, YEAH, YEAH.*"),
+        validations=[
+            sh("gcc -o main main.c").default(),
+            sh("./main").expect(".*\nHello World!.*").default(),
         ],
     ),
-    (
-        [  # pseudo-user #3
-            ("touch notes.txt && echo OK\n", ".*\nOK.*"),
-            ('echo "To do list:" > notes.txt && echo OK\n', ".*\nOK.*"),
-            ('echo "- Buy groceries" >> notes.txt && echo OK\n', ".*\nOK.*"),
-            ('echo "- Call mom" >> notes.txt && echo OK\n', ".*\nOK.*"),
-            ('echo "- Finish project" >> notes.txt && echo OK\n', ".*\nOK.*"),
-            ("cat notes.txt && echo OK\n", ".*\nOK.*"),
+    shchain(
+        cmds=[
+            sh("mkdir docs").default(),
+            sh("cd docs").default(),
+            sh("ls -lah").default(),
+            sh('echo "And I say hey"').default(),
+            sh('echo "What\'s going on"').default(),
+            sh("touch 4-non-blondes.txt").default(),
+            sh('echo "HEY, YEAH, YEAH" >> 4-non-blondes.txt').default(),
         ],
-        [  # validation #3
-            (
-                "cat notes.txt\n",
+        validations=[
+            sh("cd docs").default(),
+            sh("cat 4-non-blondes.txt").expect(".*\nHEY, YEAH, YEAH.*").errext(),
+        ],
+    ),
+    shchain(
+        cmds=[
+            sh("touch notes.txt").default(),
+            sh('echo "To do list:" > notes.txt').default(),
+            sh('echo "- Buy groceries" >> notes.txt').default(),
+            sh('echo "- Call mom" >> notes.txt').default(),
+            sh('echo "- Finish project" >> notes.txt').default(),
+            sh("cat notes.txt").default(),
+        ],
+        validations=[
+            sh("cat notes.txt")
+            .expect(
                 ".*\nTo do list:.*\n- Buy groceries.*\n- Call mom.*\n- Finish project.*",
-            ),
+            )
+            .errext()
         ],
     ),
-    (
-        [  # pseudo-user #4
-            ("mkdir project && echo OK\n", ".*\nOK.*"),
-            ("cd project && echo OK\n", ".*\nOK.*"),
-            ('git config --global user.email "1337@pwn.y" && echo OK\n', ".*\nOK.*"),
-            ('git config --global user.name "Eve" && echo OK\n', ".*\nOK.*"),
-            ("git init && echo OK\n", ".*\nOK.*"),
-            ('echo "# My Project" > README.md && echo OK\n', ".*\nOK.*"),
-            ("git add README.md && echo OK\n", ".*\nOK.*"),
-            ('git commit -m "Initial commit" && echo OK\n', ".*\nOK.*"),
+    shchain(
+        cmds=[
+            sh("mkdir project").default(),
+            sh("cd project").default(),
+            sh('git config --global user.email "1337@pwn.y"').default(),
+            sh('git config --global user.name "Eve"').default(),
+            sh("git init").default(),
+            sh('echo "# My Project" > README.md').default(),
+            sh("git add README.md").default(),
+            sh('git commit -m "Initial commit"').default(),
         ],
-        [  # validation #4
-            ("cd project && echo OK\n", ".*\nOK.*"),
-            ("git --no-pager log --oneline\n", ".*Initial commit.*"),
-        ],
-    ),
-    (
-        [  # pseudo-user #5
-            ("mkdir mydir && echo OK\n", ".*\nOK.*"),
-            ("cd mydir && echo OK\n", ".*\nOK.*"),
-            ("touch file1.txt && echo OK\n", ".*\nOK.*"),
-            ("touch file2.txt && echo OK\n", ".*\nOK.*"),
-            ("ls -l && echo OK\n", ".*\nOK.*"),
-            ("mv file1.txt file3.txt && echo OK\n", ".*\nOK.*"),
-            ("ls -l && echo OK\n", ".*\nOK.*"),
-        ],
-        [  # validation #5
-            ("cd mydir && echo OK\n", ".*\nOK.*"),
-            ("ls -l\n", ".*file2.txt.*file3.txt.*"),
+        validations=[
+            sh("cd project").default(),
+            sh("git --no-pager log --oneline").expect(".*Initial commit.*").errext(),
         ],
     ),
-    (
-        [  # pseudo-user #6
-            ("echo 'Hello, World!' > greeting.txt && echo OK\n", ".*\nOK.*"),
-            ("cat greeting.txt && echo OK\n", ".*\nOK.*"),
-            ("cp greeting.txt copy_of_greeting.txt && echo OK\n", ".*\nOK.*"),
-            ("cat copy_of_greeting.txt && echo OK\n", ".*\nOK.*"),
-            ("rm greeting.txt && echo OK\n", ".*\nOK.*"),
-            ("ls && echo OK\n", ".*\nOK.*"),
+    shchain(
+        cmds=[
+            sh("mkdir mydir").default(),
+            sh("cd mydir").default(),
+            sh("touch file1.txt").default(),
+            sh("touch file2.txt").default(),
+            sh("ls -l").default(),
+            sh("mv file1.txt file3.txt").default(),
+            sh("ls -l").default(),
         ],
-        [  # validation #6
-            ("cat copy_of_greeting.txt\n", ".*Hello, World!.*"),
+        validations=[
+            sh("cd mydir").default(),
+            sh("ls -l").expect(".*file2.txt.*file3.txt.*").errext(),
         ],
     ),
-    (
-        [  # pseudo-user #7
-            ("echo 'User 7 logging in' > log.txt && echo OK\n", ".*\nOK.*"),
-            ("echo 'Performing task 1' >> log.txt && echo OK\n", ".*\nOK.*"),
-            ("echo 'Performing task 2' >> log.txt && echo OK\n", ".*\nOK.*"),
-            ("echo 'User 7 logging out' >> log.txt && echo OK\n", ".*\nOK.*"),
-            ("cat log.txt && echo OK\n", ".*\nOK.*"),
+    shchain(
+        cmds=[
+            sh("mkdir mydir").default(),
+            sh("cd mydir").default(),
+            sh("touch file1.txt").default(),
+            sh("touch file2.txt").default(),
+            sh("ls -l").default(),
+            sh("mv file1.txt file3.txt").default(),
+            sh("ls -l").default(),
         ],
-        [  # validation #7
-            (
-                "cat log.txt\n",
+        validations=[
+            sh("cd mydir").default(),
+            sh("ls -l").expect(".*file2.txt.*file3.txt.*").errext(),
+        ],
+    ),
+    shchain(
+        cmds=[
+            sh("echo 'Hello, World!' > greeting.txt").default(),
+            sh("cat greeting.txt").default(),
+            sh("cp greeting.txt copy_of_greeting.txt").default(),
+            sh("cat copy_of_greeting.txt").default(),
+            sh("rm greeting.txt").default(),
+            sh("ls").default(),
+        ],
+        validations=[
+            sh("cat copy_of_greeting.txt").expect(".*Hello, World!.*").errext()
+        ],
+    ),
+    shchain(
+        cmds=[
+            sh("echo 'User 7 logging in' > log.txt").default(),
+            sh("echo 'Performing task 1' >> log.txt").default(),
+            sh("echo 'Performing task 2' >> log.txt").default(),
+            sh("echo 'User 7 logging out' >> log.txt").default(),
+            sh("cat log.txt").default(),
+        ],
+        validations=[
+            sh("cat log.txt")
+            .expect(
                 ".*User 7 logging in.*Performing task 1.*Performing task 2.*User 7 logging out.*",
-            ),
+            )
+            .errext()
         ],
     ),
-    (
-        [  # pseudo-user #8
-            ("mkdir music && echo OK\n", ".*\nOK.*"),
-            ("cd music && echo OK\n", ".*\nOK.*"),
-            ("touch song1.mp3 song2.mp3 && echo OK\n", ".*\nOK.*"),
-            ("ls && echo OK\n", ".*\nOK.*"),
-            ("mv song1.mp3 favorite_song.mp3 && echo OK\n", ".*\nOK.*"),
-            ("ls && echo OK\n", ".*\nOK.*"),
+    shchain(
+        cmds=[
+            sh("mkdir music").default(),
+            sh("cd music").default(),
+            sh("touch song1.mp3 song2.mp3").default(),
+            sh("ls").default(),
+            sh("mv song1.mp3 favorite_song.mp3").default(),
+            sh("ls").default(),
         ],
-        [  # validation #8
-            ("cd music && echo OK\n", ".*\nOK.*"),
-            ("ls\n", ".*favorite_song.mp3.*song2.mp3.*"),
-        ],
-    ),
-    (
-        [  # pseudo-user #9
-            ("touch data.csv && echo OK\n", ".*\nOK.*"),
-            ('echo "name,age" > data.csv && echo OK\n', ".*\nOK.*"),
-            ('echo "Alice,30" >> data.csv && echo OK\n', ".*\nOK.*"),
-            ('echo "Bob,25" >> data.csv && echo OK\n', ".*\nOK.*"),
-            ("cat data.csv && echo OK\n", ".*\nOK.*"),
-        ],
-        [  # validation #9
-            ("cat data.csv\n", ".*name,age.*Alice,30.*Bob,25.*"),
+        validations=[
+            sh("cd music").default(),
+            sh("ls").expect(".*favorite_song.mp3.*song2.mp3.*").errext(),
         ],
     ),
-    (
-        [  # pseudo-user #10
-            ("mkdir scripts && echo OK\n", ".*\nOK.*"),
-            ("cd scripts && echo OK\n", ".*\nOK.*"),
-            ("touch script.sh && echo OK\n", ".*\nOK.*"),
-            ("chmod +x script.sh && echo OK\n", ".*\nOK.*"),
-            ("echo '#!/bin/sh' > script.sh && echo OK\n", ".*\nOK.*"),
-            ('echo "echo Hello, Script" >> script.sh && echo OK\n', ".*\nOK.*"),
-            ("./script.sh && echo OK\n", ".*\nHello, Script.*"),
+    shchain(
+        cmds=[
+            sh("touch data.csv").default(),
+            sh('echo "name,age" > data.csv').default(),
+            sh('echo "Alice,30" >> data.csv').default(),
+            sh('echo "Bob,25" >> data.csv').default(),
+            sh("cat data.csv").default(),
         ],
-        [  # validation #10
-            ("cd scripts && echo OK\n", ".*\nOK.*"),
-            ("./script.sh\n", ".*Hello, Script.*"),
+        validations=[
+            sh("cat data.csv").expect(".*name,age.*Alice,30.*Bob,25.*").errext(),
         ],
     ),
-    (
-        [  # pseudo-user #11
-            ("mkdir photos && echo OK\n", ".*\nOK.*"),
-            ("cd photos && echo OK\n", ".*\nOK.*"),
-            ("touch img1.jpg img2.jpg img3.jpg && echo OK\n", ".*\nOK.*"),
-            ("ls && echo OK\n", ".*\nOK.*"),
-            ("rm img2.jpg && echo OK\n", ".*\nOK.*"),
-            ("ls && echo OK\n", ".*\nOK.*"),
+    shchain(
+        cmds=[
+            sh("mkdir scripts").default(),
+            sh("cd scripts").default(),
+            sh("touch script.sh").default(),
+            sh("chmod +x script.sh").default(),
+            sh("echo '#!/bin/sh' > script.sh").default(),
+            sh('echo "echo Hello, Script" >> script.sh').default(),
+            sh("./script.sh").default(),
         ],
-        [  # validation #11
-            ("cd photos && echo OK\n", ".*\nOK.*"),
-            ("ls\n", ".*img1.jpg.*img3.jpg.*"),
+        validations=[
+            sh("cd scripts").default(),
+            sh("./script.sh").expect(".*Hello, Script.*").errext(),
         ],
     ),
-    (
-        [  # pseudo-user #12
-            ("touch todo.txt && echo OK\n", ".*\nOK.*"),
-            ('echo "1. Finish homework" > todo.txt && echo OK\n', ".*\nOK.*"),
-            ('echo "2. Clean room" >> todo.txt && echo OK\n', ".*\nOK.*"),
-            ('echo "3. Exercise" >> todo.txt && echo OK\n', ".*\nOK.*"),
-            ("cat todo.txt && echo OK\n", ".*\nOK.*"),
+    shchain(
+        cmds=[
+            sh("mkdir photos").default(),
+            sh("cd photos").default(),
+            sh("touch img1.jpg img2.jpg img3.jpg").default(),
+            sh("ls").default(),
+            sh("rm img2.jpg").default(),
+            sh("ls").default(),
         ],
-        [  # validation #12
-            (
-                "cat todo.txt\n",
+        validations=[
+            sh("cd photos").default(),
+            sh("ls").expect(".*img1.jpg.*img3.jpg.*").errext(),
+        ],
+    ),
+    shchain(
+        cmds=[
+            sh("touch todo.txt").default(),
+            sh('echo "1. Finish homework" > todo.txt').default(),
+            sh('echo "2. Clean room" >> todo.txt').default(),
+            sh('echo "3. Exercise" >> todo.txt').default(),
+            sh("cat todo.txt").default(),
+        ],
+        validations=[
+            sh("cat todo.txt")
+            .expect(
                 ".*1. Finish homework.*2. Clean room.*3. Exercise.*",
-            ),
+            )
+            .errext(),
         ],
     ),
-    (
-        [  # pseudo-user #13
-            ("mkdir workspace && echo OK\n", ".*\nOK.*"),
-            ("cd workspace && echo OK\n", ".*\nOK.*"),
-            ("touch project1.txt project2.txt && echo OK\n", ".*\nOK.*"),
-            ("ls && echo OK\n", ".*\nOK.*"),
-            ("rm project1.txt && echo OK\n", ".*\nOK.*"),
-            ("ls && echo OK\n", ".*\nOK.*"),
+    shchain(
+        cmds=[
+            sh("mkdir workspace").default(),
+            sh("cd workspace").default(),
+            sh("touch project1.txt project2.txt").default(),
+            sh("ls").default(),
+            sh("rm project1.txt").default(),
+            sh("ls").default(),
         ],
-        [  # validation #13
-            ("cd workspace && echo OK\n", ".*\nOK.*"),
-            ("ls\n", ".*project2.txt.*"),
+        validations=[
+            sh("cd workspace").default(),
+            sh("ls").expect(".*project2.txt.*").errext(),
         ],
     ),
-    (
-        [  # pseudo-user #14
-            ("echo 'Hello from User 42' > message.txt && echo OK\n", ".*\nOK.*"),
-            ("cat message.txt && echo OK\n", ".*\nOK.*"),
-            ("mv message.txt greetings.txt && echo OK\n", ".*\nOK.*"),
-            ("cat greetings.txt && echo OK\n", ".*\nOK.*"),
+    shchain(
+        cmds=[
+            sh("echo 'Hello from User 42' > message.txt").default(),
+            sh("cat message.txt").default(),
+            sh("mv message.txt greetings.txt").default(),
+            sh("cat greetings.txt").default(),
         ],
-        [  # validation #14
-            ("cat greetings.txt\n", ".*Hello from User 42.*"),
+        validations=[
+            sh("cat greetings.txt").expect(".*Hello from User 42.*").errext(),
         ],
     ),
 ]
 
 
-def get_noise(i: int):
+def get_noise(i: int) -> ShellCommandChain:
     return NOISE[i]
 
 
-def get_random_noise():
+def get_random_noise() -> tuple[int, ShellCommandChain]:
     i = randrange(len(NOISE))
     return (i, NOISE[i])

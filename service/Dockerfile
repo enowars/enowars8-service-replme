@@ -15,9 +15,9 @@ RUN make -C frontend
 COPY ./backend ./backend
 RUN go build -C backend -o out/main
 
-COPY ./image ./image
+COPY ./image-go ./image-go
 
 EXPOSE 6969/tcp
 
-ENTRYPOINT ["./backend/out/main", "-d", "./frontend/out", "-i", "./image", "-k", "/apikey/key.txt"]
+ENTRYPOINT ["./backend/out/main", "-d", "./frontend/out", "-i", "./image-go", "-k", "/apikey/key.txt"]
 

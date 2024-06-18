@@ -1,7 +1,7 @@
 package service
 
 import (
-	"fmt"
+	"replme/util"
 	"time"
 )
 
@@ -29,28 +29,32 @@ func (cleanup *CleanupService) DoCleanup() {
 	for _, container := range containers {
 		created := time.Unix(container.Created, 0)
 		if created.Before(cutoffTime) {
-			fmt.Println("Removing container: ", container.Names[0])
+			util.SLogger.Debugf("Removing container: %s", container.Names[0][:10])
 			cleanup.Docker.RemoveContainerById(container.ID)
 			name := container.Names[0][1:] // [1:] because name starts with '/'
 			cleanup.ReplState.DeleteContainer(name)
 		}
 	}
 
+	util.SLogger.Debug("Pruning volumes starting ..")
+	start := time.Now()
 	cleanup.Docker.VolumesPrune()
+	util.SLogger.Debugf("Pruning volumes [%v]", time.Since(start))
 }
 
 func (cleanup *CleanupService) StartTask() *chan struct{} {
 
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(1 * time.Minute)
 	quit := make(chan struct{})
 
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				fmt.Println("Running cleanup ...")
+				util.SLogger.Debug("Cleanup containers starting ..")
+				start := time.Now()
 				cleanup.DoCleanup()
-				fmt.Println("Cleanup finished")
+				util.SLogger.Infof("Cleanup containers [%v]", time.Since(start))
 			case <-quit:
 				ticker.Stop()
 				return

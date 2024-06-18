@@ -23,6 +23,7 @@ from util import (
     create_user,
     do_user_login,
     get_sessions,
+    sh,
     terminal_websocket,
     user_login,
 )
@@ -41,16 +42,14 @@ async def putflag0(
     db: ChainDB,
     logger: LoggerAdapter,
 ) -> str:
-    (username, password, cookies, replUuid) = await create_user(client, db, logger)
+    (username, _, cookies, replUuid) = await create_user(client, db, logger)
     flag = base64.b64encode(bytes(task.flag, "utf-8")).decode("utf-8")
     await terminal_websocket(
         task.address,
         logger,
         cookies,
         replUuid,
-        [
-            (f'echo "{flag}" > flagstore.txt && echo OK\n', ".*\nOK.*"),
-        ],
+        [sh(f'echo "{flag}" > flagstore.txt').default()],
     )
 
     return username
@@ -73,9 +72,7 @@ async def getflag0(
             logger,
             cookies,
             replUuid,
-            [
-                ("cat flagstore.txt\n", f".*\n{flag}.*"),
-            ],
+            [sh("cat flagstore.txt").expect(f".*\n{flag}.*").errext()],
         )
     except TimeoutError:
         raise MumbleException("Flag was not found")
@@ -109,12 +106,7 @@ async def exploit0(
         logger,
         cookies,
         replUuid,
-        [
-            (
-                f"echo FLAG && cat ../{target_username}/flagstore.txt && echo OK\n",
-                ".*\nOK.*",
-            ),
-        ],
+        [sh(f"echo FLAG && cat ../{target_username}/flagstore.txt").default()],
     )
 
     match = re.findall(r"FLAG\s*([A-Za-z0-9\+\=\/]+)\s*OK", response)
@@ -142,7 +134,7 @@ async def putnoise0(
         logger,
         cookies,
         replUuid,
-        noise[0],
+        noise.command_chain,
     )
 
     await db.set("noise_id", i)
@@ -160,7 +152,7 @@ async def getnoise0(
     assert_equals(len(sessions) > 0, True, "No session created")
     try:
         i = await db.get("noise_id")
-    except:
+    except KeyError:
         raise MumbleException("noise_id not present in chaindb")
     if not isinstance(i, int):
         raise MumbleException("noise_id is not a int: " + str(i))
@@ -170,7 +162,7 @@ async def getnoise0(
         logger,
         cookies,
         replUuid,
-        noise[1],
+        noise.validation_chain,
     )
 
 

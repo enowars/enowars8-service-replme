@@ -1,0 +1,25 @@
+portable-pty:
+    - 1 month
+    - 14.7k stars
+    - can't set gid and uid / needs fork?
+    - https://github.com/wez/wezterm
+
+pty-process:
+    - 10 months
+    - 18 stars
+    - https://github.com/doy/pty-process
+
+ptyprocess:
+    - 15 months
+    - 11 stars
+    - https://github.com/zhiburt/ptyprocess
+
+tokio_pty_process:
+    - 0.5 months
+    - 43 stars
+    - https://github.com/pkgw/stund/
+
+webterm:
+    - good example
+    - https://github.com/fubarnetes/webterm
+

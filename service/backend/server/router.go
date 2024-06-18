@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"os"
 	"path"
 
 	"replme/controller"
@@ -14,6 +15,13 @@ import (
 )
 
 func NewRouter(docker *service.DockerService, dist string) *gin.Engine {
+
+	logLevel, exists := os.LookupEnv("REPL_LOG")
+	if !exists {
+		logLevel = "info"
+	}
+
+	util.LoggerInit(logLevel)
 
 	replState := service.ReplState()
 	userController := controller.NewUserController(&replState)
@@ -60,10 +68,6 @@ func NewRouter(docker *service.DockerService, dist string) *gin.Engine {
 		"/api/user/sessions", userController.Sessions,
 	)
 
-	// engine.GET(
-	// 	"/api/user/sessions/debug", userController.SessionsDebug,
-	// )
-
 	engine.POST(
 		"/api/repl", replController.Create,
 	)
@@ -74,10 +78,6 @@ func NewRouter(docker *service.DockerService, dist string) *gin.Engine {
 
 	engine.GET(
 		"/api/repl/:replUuid", replController.Websocket,
-	)
-
-	engine.POST(
-		"/api/repl/:replUuid/size", replController.Resize,
 	)
 
 	return engine

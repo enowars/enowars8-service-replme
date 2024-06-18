@@ -1,9 +1,8 @@
 import { Terminal } from "@xterm/xterm";
-import { AttachAddon } from "@xterm/addon-attach";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
-import { randomString, sleep } from "./lib";
+import { AttachAddon, randomString, sleep } from "./lib";
 
 const retry = 5;
 const delay = 1000;
@@ -51,33 +50,9 @@ terminal.loadAddon(canvas);
 terminal.loadAddon(clipboard);
 terminal.loadAddon(fit);
 
-terminal.onResize((size: { cols: number, rows: number }) => {
-  if (!replUuid) {
-    return;
-  }
-  const cols = size.cols;
-  const rows = size.rows;
-
-  fetch(
-    `/api/repl/${replUuid}/size`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        cols,
-        rows
-      })
-    }
-  );
-});
-
 const resizeObserver = new ResizeObserver(() => {
   fit.fit();
 });
-
-fit.fit()
 
 let terminalContainer = document.getElementById('terminal');
 terminal.open(terminalContainer!);
@@ -121,11 +96,12 @@ async function connect() {
           document.addEventListener('keydown', (event) => {
             if (event.code === "Escape") {
               event.preventDefault();
-              socket.send('\x1B');
+              socket.send(JSON.stringify({ stdin: '\x1B' }));
               terminal.focus();
             }
           });
           terminal.loadAddon(new AttachAddon(socket));
+          fit.fit()
         };
         window.onbeforeunload = function(e: any) {
           if (e) {

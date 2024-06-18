@@ -63,6 +63,6 @@ jobs:
     - name: Kill docker containers
       if: failure() || success()
       run: |
-        (cd service && docker compose kill)
-        (cd checker && docker compose kill)
+        (cd service && docker compose down -v || docker compose kill)
+        (cd checker && docker compose down -v || docker compose kill)
 
