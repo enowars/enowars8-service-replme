@@ -42,156 +42,114 @@ func (repl *ReplController) Create(ctx *gin.Context) {
 		return
 	}
 
-	util.SLogger.Debugf("[%-25s] Creating REPL", fmt.Sprintf("UN:%s..", loginRequest.Username[:5]))
+	util.SLogger.Debugf("[%-25s] Creating new REPL user", fmt.Sprintf("UN:%s..", loginRequest.Username[:5]))
 
 	hash := repl.CRC.Calculate(util.DecodeSpecialChars([]byte(loginRequest.Username)))
 	name := fmt.Sprintf("%x", hash)
 
-	util.SLogger.Debugf("[%-25s] Creating container", fmt.Sprintf("UN:%s.. | NM:%s..", loginRequest.Username[:5], name[:5]))
-	_, port, err := repl.Docker.EnsureContainerStarted(name)
-
-	if err != nil {
-		util.SLogger.Warnf("[%-25s] Creating container failed: %s", fmt.Sprintf("UN:%s..", loginRequest.Username[:5]), err.Error())
-		ctx.JSON(400, types.ErrorResponse{
-			Error: err.Error(),
-		})
-		return
-	}
-
-	p := service.Proxy(repl.Docker.HostIP, *port, repl.Docker.ApiKey)
-	var response *http.Response
-	var requestError *types.RequestError
-	response, requestError = p.SendRegisterRequest(
-		types.RegisterRequest{
-			Username: loginRequest.Username,
-			Password: loginRequest.Password,
-		},
-		&types.RequestOptions{
-			Retries: 10,
-		},
-	)
-
-	if requestError != nil {
-		ctx.Data(requestError.Code, requestError.ContentType, requestError.Data)
-		return
-	}
+	util.SLogger.Debugf("[%-25s] Created new REPL user", fmt.Sprintf("UN:%s.. | NM:%s..", loginRequest.Username[:5], name[:5]))
 
 	session := sessions.Default(ctx)
-	repl.ReplState.AddContainer(
-		session.ID(),
-		name,
-		loginRequest.Username,
-		loginRequest.Password,
-	)
+	auth_type := session.Get("auth_type")
+	if auth_type == nil {
+		session.Set("auth_type", "bare")
+		session.Save()
+	}
 
-	uuid := repl.ReplState.AddReplSession(
-		session.ID(),
-		name,
-		*response.Cookies()[0],
-	)
+	util.SLogger.Debugf("[%-25s] Saving session %s..", fmt.Sprintf("UN:%s.. | NM:%s..", loginRequest.Username[:5], name[:5]), session.ID()[:5])
 
-	ctx.JSON(response.StatusCode, types.CreateReplResponse{
-		ReplUuid: uuid,
+	repl.ReplState.AddUserSession(session.ID(), name, loginRequest.Username, loginRequest.Password)
+
+	ctx.JSON(http.StatusOK, types.AddReplUserResponse{
+		Id: name,
 	})
-}
-
-func (repl *ReplController) CreateFromName(ctx *gin.Context) {
-	session := sessions.Default(ctx)
-	name := ctx.Param("name")
-
-	data := repl.ReplState.GetContainerCredentials(session.ID(), name)
-
-	if data == nil {
-		util.SLogger.Warnf("[%-25s] Attempted REPL: Container not existing", fmt.Sprintf("ID:%s.. | NM:%s..", session.ID()[:5], name[:5]))
-		ctx.JSON(404, types.ErrorResponse{
-			Error: "Container not found",
-		})
-		return
-	}
-
-	util.SLogger.Debugf("[%-25s] Creating REPL", fmt.Sprintf("UN:%s.. | NM:%s..", data.Username[:5], name[:5]))
-	util.SLogger.Debugf("[%-25s] Creating container", fmt.Sprintf("UN:%s.. | NM:%s..", data.Username[:5], name[:5]))
-	_, port, err := repl.Docker.EnsureContainerStarted(name)
-
-	if err != nil {
-		util.SLogger.Warnf("[%-25s] Creating container failed, %s", fmt.Sprintf("UN:%s.. | NM:%s..", data.Username[:5], name[:5]), err.Error())
-		ctx.JSON(400, types.ErrorResponse{
-			Error: err.Error(),
-		})
-		return
-	}
-
-	p := service.Proxy(repl.Docker.HostIP, *port, repl.Docker.ApiKey)
-	var response *http.Response
-	var requestError *types.RequestError
-	response, requestError = p.SendRegisterRequest(
-		types.RegisterRequest{
-			Username: data.Username,
-			Password: data.Password,
-		},
-		&types.RequestOptions{
-			Retries: 10,
-		},
-	)
-
-	if requestError != nil {
-		ctx.Data(requestError.Code, requestError.ContentType, requestError.Data)
-		return
-	}
-
-	uuid := repl.ReplState.AddReplSession(
-		session.ID(),
-		name,
-		*response.Cookies()[0],
-	)
-
-	ctx.JSON(response.StatusCode, types.CreateReplResponse{
-		ReplUuid: uuid,
-	})
+	return
 }
 
 func (repl *ReplController) Websocket(ctx *gin.Context) {
 	session := sessions.Default(ctx)
-	replUuid := ctx.Param("replUuid")
-	name, cookie, exists := repl.ReplState.GetReplSession(session.ID(), replUuid)
 
-	if !exists {
-		util.SLogger.Warnf("[%-25s] Attempted websocket: Container not existing", fmt.Sprintf("ID:%s.. | NM:%s..", session.ID()[:5], (*name)[:5]))
-		ctx.JSON(404, types.ErrorResponse{
-			Error: "Container not found",
+	auth_type := session.Get("auth_type")
+	if session.ID() == "" || auth_type == nil {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, types.ErrorResponse{
+			Error: "Unauthorized",
 		})
 		return
 	}
 
-	port := repl.Docker.GetContainerPort(*name)
-	if port == nil {
-		ctx.JSON(404, types.ErrorResponse{
-			Error: "Container/Port not found",
+	name := ctx.Param("name")
+
+	user := repl.ReplState.GetUserSessionData(session.ID(), name)
+	util.SLogger.Debugf("Username: %s, Password: %s", user.Username, user.Password)
+
+	if user == nil {
+		util.SLogger.Warnf("[%-25s] Attempted websocket: User data not existing", fmt.Sprintf("ID:%s.. | NM:%s..", session.ID()[:5], name[:5]))
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{
+			Error: "User data not found",
 		})
 		return
 	}
+
+	util.SLogger.Debugf("Adding container session")
+	repl.ReplState.AddContainerSession(name)
+
+	defer func() {
+		var lock util.Unlocker
+		util.SLogger.Debugf("Deleting container session")
+		kill := repl.ReplState.DeleteContainerSession(name, func(name string) {
+			lock = repl.Docker.MutexMap.Lock(name)
+		})
+
+		if kill {
+			util.SLogger.Infof("[%-25s] Killing container", fmt.Sprintf("NM:%s..", name[:5]))
+			start := time.Now()
+			repl.Docker.KillContainerByName(name)
+			util.SLogger.Infof("[%-25s] Killing container took %v", fmt.Sprintf("NM:%s..", name[:5]), time.Since(start))
+			lock.Unlock()
+		}
+	}()
+
+	util.SLogger.Debugf("[%-25s] Creating REPL", fmt.Sprintf("UN:%s.. | NM:%s..", user.Username[:5], name[:5]))
+	util.SLogger.Debugf("[%-25s] Creating container", fmt.Sprintf("UN:%s.. | NM:%s..", user.Username[:5], name[:5]))
+
+	lock := repl.Docker.MutexMap.Lock(name)
+	_, port, err := repl.Docker.EnsureContainerStarted(name)
+	lock.Unlock()
+
+	if err != nil {
+		util.SLogger.Warnf("[%-25s] Creating container failed, %s", fmt.Sprintf("UN:%s.. | NM:%s..", user.Username[:5], name[:5]), err.Error())
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, types.ErrorResponse{
+			Error: err.Error(),
+		})
+		return
+	}
+
 	p := service.Proxy(repl.Docker.HostIP, *port, repl.Docker.ApiKey)
+
+	response, requestError := p.SendRegisterRequest(
+		types.RegisterRequest{
+			Username: user.Username,
+			Password: user.Password,
+		},
+		&types.RequestOptions{
+			Retries: 10,
+		},
+	)
+
+	if requestError != nil {
+		ctx.Data(requestError.Code, requestError.ContentType, requestError.Data)
+		ctx.Abort()
+		return
+	}
+
+	cookie := response.Cookies()[0]
+
 	clientConn, err := repl.Upgrader.Upgrade(ctx.Writer, ctx.Request, nil)
 	if err != nil {
 		ctx.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-	defer func() {
-		repl.ReplState.DeleteReplSession(
-			session.ID(),
-			*name,
-			replUuid,
-		)
-		go func() {
-			time.Sleep(50 * time.Second)
-			if !repl.ReplState.HasActiveReplSessions(session.ID(), *name) {
-				util.SLogger.Infof("[%-25s] Killing container", fmt.Sprintf("NM:%s..", (*name)[:5]))
-				start := time.Now()
-				repl.Docker.KillContainerByName(*name)
-				util.SLogger.Infof("[%-25s] Killing container took %v", fmt.Sprintf("NM:%s..", (*name)[:5]), time.Since(start))
-			}
-		}()
-	}()
+
 	defer clientConn.Close()
 	err = p.CreateWebsocketPipe(clientConn, *cookie)
 	if err != nil {

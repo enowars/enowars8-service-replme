@@ -1,4 +1,4 @@
-import { UserSessionResponseSchema } from "./lib"
+import { randomString, UserSessionResponseSchema } from "./lib"
 
 customElements.define(
   'session-elem',
@@ -40,11 +40,37 @@ customElements.define(
   },
 )
 
+const button = document.getElementById("repl-button")
+
+button.onclick = async () => {
+  const username = randomString(60);
+  const password = randomString(60);
+  const res = await fetch(
+    '/api/repl',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username,
+        password
+      })
+    }
+  )
+
+  if (res.ok) {
+    const id = (await res.json()).id
+    location.href = "/term/" + id
+  }
+
+}
+
 fetch("/api/user/sessions")
   .then((response) => response.json())
   .then((data) => UserSessionResponseSchema.parse(data))
   .then((names) => {
-    const container = document.getElementById("session_container")
+    const container = document.getElementById("session-container")
     names.forEach((name) => {
 
       const session = document.createElement('session-elem');
@@ -60,12 +86,4 @@ fetch("/api/user/sessions")
       container.appendChild(session);
     })
   })
-
-
-// fetch("/api/user/sessions/debug")
-//   .then((response) => response.json())
-//   .then((data) => {
-//     const container = document.getElementById("sessions_debug")
-//     container.innerText = JSON.stringify(data, null, 2)
-//   })
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"replme/service"
+	"replme/types"
 	"replme/util"
 
 	"github.com/gin-contrib/sessions"
@@ -22,7 +23,14 @@ func NewUserController(replState *service.ReplStateService) UserController {
 
 func (user *UserController) Sessions(ctx *gin.Context) {
 	session := sessions.Default(ctx)
-	names := user.ReplState.GetContainerNames(session.ID())
+	auth_type := session.Get("auth_type")
+	if session.ID() == "" || auth_type == nil {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, types.ErrorResponse{
+			Error: "Unauthorized",
+		})
+		return
+	}
 	util.SLogger.Debugf("[%-25s] Get sessions", fmt.Sprintf("ID:%s..", session.ID()[:5]))
+	names := user.ReplState.GetContainerNames(session.ID())
 	ctx.JSON(http.StatusOK, names)
 }

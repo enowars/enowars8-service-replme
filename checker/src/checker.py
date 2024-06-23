@@ -20,11 +20,11 @@ import base64
 from exploit import exploit0_apply_delta
 from noise import get_noise, get_random_noise
 from util import (
-    create_user,
-    do_user_login,
+    do_user_auth,
     get_sessions,
     sh,
     terminal_websocket,
+    user_create,
     user_login,
 )
 
@@ -42,13 +42,13 @@ async def putflag0(
     db: ChainDB,
     logger: LoggerAdapter,
 ) -> str:
-    (username, _, cookies, replUuid) = await create_user(client, db, logger)
+    (username, cookies, id) = await user_create(client, db, logger)
     flag = base64.b64encode(bytes(task.flag, "utf-8")).decode("utf-8")
     await terminal_websocket(
         task.address,
         logger,
         cookies,
-        replUuid,
+        id,
         [sh(f'echo "{flag}" > flagstore.txt').default()],
     )
 
@@ -62,7 +62,7 @@ async def getflag0(
     db: ChainDB,
     logger: LoggerAdapter,
 ) -> None:
-    (_, _, cookies, replUuid) = await user_login(client, db, logger)
+    (cookies, id) = await user_login(client, db, logger)
     flag = (
         base64.b64encode(bytes(task.flag, "utf-8")).decode("utf-8").replace("+", "\\+")
     )
@@ -71,7 +71,7 @@ async def getflag0(
             task.address,
             logger,
             cookies,
-            replUuid,
+            id,
             [sh("cat flagstore.txt").expect(f".*\n{flag}.*").errext()],
         )
     except TimeoutError:
@@ -100,12 +100,12 @@ async def exploit0(
 
     password = secrets.token_hex(30)
 
-    (cookies, replUuid) = await do_user_login(client, logger, delta_username, password)
+    (cookies, id) = await do_user_auth(client, logger, delta_username, password)
     response = await terminal_websocket(
         task.address,
         logger,
         cookies,
-        replUuid,
+        id,
         [sh(f"echo FLAG && cat ../{target_username}/flagstore.txt").default()],
     )
 
@@ -124,7 +124,7 @@ async def putnoise0(
     db: ChainDB,
     logger: LoggerAdapter,
 ):
-    (_, _, cookies, replUuid) = await create_user(client, db, logger)
+    (_, cookies, id) = await user_create(client, db, logger)
     sessions = await get_sessions(client, cookies, logger)
     assert_equals(len(sessions) > 0, True, "No session created")
 
@@ -133,7 +133,7 @@ async def putnoise0(
         task.address,
         logger,
         cookies,
-        replUuid,
+        id,
         noise.command_chain,
     )
 
@@ -147,7 +147,7 @@ async def getnoise0(
     db: ChainDB,
     logger: LoggerAdapter,
 ):
-    (_, _, cookies, replUuid) = await user_login(client, db, logger)
+    (cookies, id) = await user_login(client, db, logger)
     sessions = await get_sessions(client, cookies, logger)
     assert_equals(len(sessions) > 0, True, "No session created")
     try:
@@ -161,7 +161,7 @@ async def getnoise0(
         task.address,
         logger,
         cookies,
-        replUuid,
+        id,
         noise.validation_chain,
     )
 
@@ -172,40 +172,28 @@ async def havoc0(
     client: AsyncClient,
     logger: LoggerAdapter,
 ):
+    response = await client.get("/", follow_redirects=True)
     assert_equals(
-        (await client.get("/", follow_redirects=True)).status_code < 300,
+        response.status_code < 300,
         True,
         "Failed to get index.html",
     )
+
     assert_equals(
-        (await client.get("/static/js/index.js", follow_redirects=True)).status_code
-        < 300,
+        (await client.get("/favicon.ico", follow_redirects=True)).status_code < 300,
         True,
-        "Failed to get index.js",
+        "Failed to get favicon.ico",
     )
-    assert_equals(
-        (await client.get("/term", follow_redirects=True)).status_code < 300,
-        True,
-        "Failed to get term.html",
-    )
-    assert_equals(
-        (await client.get("/static/js/term.js", follow_redirects=True)).status_code
-        < 300,
-        True,
-        "Failed to get term.js",
-    )
-    assert_equals(
-        (await client.get("/static/css/style.css", follow_redirects=True)).status_code
-        < 300,
-        True,
-        "Failed to get style.css",
-    )
-    assert_equals(
-        (await client.get("/static/css/xterm.css", follow_redirects=True)).status_code
-        < 300,
-        True,
-        "Failed to get xterm.css",
-    )
+
+    pattern = r'[href|src]="(/[^"]*)"'
+    matches = re.findall(pattern, response.text)
+    for match in matches:
+        if isinstance(match, str) and match.startswith("/_next/static"):
+            assert_equals(
+                (await client.get(match, follow_redirects=True)).status_code < 300,
+                True,
+                "Failed to get " + match,
+            )
 
 
 if __name__ == "__main__":

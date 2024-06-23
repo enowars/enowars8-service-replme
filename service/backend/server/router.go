@@ -3,22 +3,27 @@ package server
 import (
 	"net/http"
 	"os"
-	"path"
 
 	"replme/controller"
 	"replme/service"
 	"replme/util"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/memstore"
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(docker *service.DockerService, dist string) *gin.Engine {
+func NewRouter(docker *service.DockerService) *gin.Engine {
 
 	logLevel, exists := os.LookupEnv("REPL_LOG")
 	if !exists {
 		logLevel = "info"
+	}
+
+	setupCors := false
+	if _, exists := os.LookupEnv("REPL_CORS"); exists {
+		setupCors = true
 	}
 
 	util.LoggerInit(logLevel)
@@ -33,34 +38,31 @@ func NewRouter(docker *service.DockerService, dist string) *gin.Engine {
 
 	engine := gin.Default()
 
+	if setupCors {
+		engine.Use(cors.New(cors.Config{
+			AllowOrigins:     []string{"http://localhost:3000", "http://127.0.0.1:3000"},
+			AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+			AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+			ExposeHeaders:    []string{"Content-Length"},
+			AllowCredentials: true,
+		}))
+	}
+
 	secret, _ := util.RandomBytes(64)
 	store := memstore.NewStore(secret)
+	if setupCors {
+		store.Options(sessions.Options{
+			Path:     "/api",
+			Secure:   true,
+			SameSite: http.SameSiteNoneMode,
+		})
+	} else {
+		store.Options(sessions.Options{
+			Path:   "/api",
+			Secure: true,
+		})
+	}
 	engine.Use(sessions.Sessions("session", store))
-
-	engine.Static("/static", path.Join(dist, "static"))
-	engine.LoadHTMLGlob(path.Join(dist, "*.html"))
-
-	engine.Use(func(ctx *gin.Context) {
-		session := sessions.Default(ctx)
-		temp_auth := session.Get("temp_auth")
-		if temp_auth == nil {
-			session.Set("temp_auth", true)
-			session.Save()
-		}
-		ctx.Next()
-	})
-
-	engine.GET("/", func(ctx *gin.Context) {
-		ctx.HTML(http.StatusOK, "index.html", gin.H{})
-	})
-
-	engine.GET("/term", func(ctx *gin.Context) {
-		ctx.HTML(http.StatusOK, "term.html", gin.H{})
-	})
-
-	engine.GET("/term/:name", func(ctx *gin.Context) {
-		ctx.HTML(http.StatusOK, "term.html", gin.H{})
-	})
 
 	/////////////////////// API ///////////////////////
 
@@ -72,12 +74,8 @@ func NewRouter(docker *service.DockerService, dist string) *gin.Engine {
 		"/api/repl", replController.Create,
 	)
 
-	engine.POST(
-		"/api/repl/name/:name", replController.CreateFromName,
-	)
-
 	engine.GET(
-		"/api/repl/:replUuid", replController.Websocket,
+		"/api/repl/:name", replController.Websocket,
 	)
 
 	return engine

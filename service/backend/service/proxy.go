@@ -64,8 +64,12 @@ func (proxy *ProxyService) SendRegisterRequest(
 		proxy.Target.ApiKey,
 	)
 
+	util.SLogger.Debugf("[UN:%s..] -> [%s:%d] Sending register request", request.Username[:5], proxy.Target.IP, proxy.Target.Port)
+	start := time.Now()
+
 	var response *http.Response
 	for i := 0; i < retries; i++ {
+		time.Sleep(50 * time.Millisecond)
 		util.SLogger.Debugf("[UN:%s..] -> [%s:%d]  Sending register request (try %d)", request.Username[:5], proxy.Target.IP, proxy.Target.Port, i+1)
 		response, err = http.Post(
 			url,
@@ -75,8 +79,9 @@ func (proxy *ProxyService) SendRegisterRequest(
 		if err == nil {
 			break
 		}
-		time.Sleep(200 * time.Millisecond)
 	}
+
+	util.SLogger.Debugf("[UN:%s..] -> [%s:%d] Sending register request took %v", request.Username[:5], proxy.Target.IP, proxy.Target.Port, time.Since(start))
 
 	if err != nil {
 		util.SLogger.Errorf("[UN:%s..] -> [%s:%d] Register request failed: %s", request.Username[:5], proxy.Target.IP, proxy.Target.Port, err.Error())
@@ -129,6 +134,7 @@ func (proxy *ProxyService) CreateWebsocketPipe(clientConn *websocket.Conn, cooki
 	}
 
 	util.SLogger.Debugf("[..] -> [%s:%d] Dialing websocket", proxy.Target.IP, proxy.Target.Port)
+	start := time.Now()
 	targetConn, _, err := websocket.DefaultDialer.Dial(
 		targetURL.String(),
 		http.Header{
@@ -137,6 +143,7 @@ func (proxy *ProxyService) CreateWebsocketPipe(clientConn *websocket.Conn, cooki
 			},
 		},
 	)
+	util.SLogger.Debugf("[..] -> [%s:%d] Dialing websocket took %v", proxy.Target.IP, proxy.Target.Port, time.Since(start))
 
 	if err != nil {
 		util.SLogger.Errorf("[..] -> [%s:%d] Dialing failed: ", proxy.Target.IP, proxy.Target.Port, err.Error())

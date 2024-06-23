@@ -1,0 +1,17 @@
+FROM node:alpine
+RUN apk add g++ make py3-pip go
+
+WORKDIR /root
+
+COPY ./backend/go.mod ./backend/go.sum ./backend/
+RUN go mod -C backend download
+
+COPY ./backend ./backend
+RUN go build -C backend -ldflags "-s -w" -o out/main
+
+COPY ./image ./image
+
+EXPOSE 6969/tcp
+
+ENTRYPOINT ["./backend/out/main", "-i", "./image", "-k", "/apikey/key.txt"]
+

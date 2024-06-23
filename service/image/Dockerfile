@@ -8,7 +8,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . ./
-RUN go build -o out/main
+RUN go build -ldflags "-s -w" -o out/main
 
 EXPOSE 3000/tcp
 

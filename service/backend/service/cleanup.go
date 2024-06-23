@@ -31,8 +31,8 @@ func (cleanup *CleanupService) DoCleanup() {
 		if created.Before(cutoffTime) {
 			util.SLogger.Debugf("Removing container: %s", container.Names[0][:10])
 			cleanup.Docker.RemoveContainerById(container.ID)
-			name := container.Names[0][1:] // [1:] because name starts with '/'
-			cleanup.ReplState.DeleteContainer(name)
+			// name := container.Names[0][1:] // [1:] because name starts with '/'
+			// cleanup.ReplState.DeleteContainer(name)
 		}
 	}
 

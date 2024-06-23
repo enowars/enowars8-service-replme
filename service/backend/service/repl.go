@@ -1,93 +1,91 @@
 package service
 
 import (
-	"net/http"
 	"sync"
-
-	"github.com/google/uuid"
+	"time"
 )
 
-type ContainerCredentials struct {
+type SessionID string
+type ContainerName string
+
+type UserSessionData struct {
+	Created  time.Time
 	Username string
 	Password string
 }
 
-type ContainerData struct {
-	Username string
-	Password string
-	Sessions map[string] /* ReplUuid -> SessionCookie */ http.Cookie
-}
+type UserSessions map[ContainerName]UserSessionData
 
-type Containers map[string] /* ContainerName ->*/ ContainerData
+type ContainerSessionData struct {
+	LastAccessed  time.Time
+	SessionsCount int
+	Mutex         sync.RWMutex
+}
 
 type ReplStateService struct {
-	Mutex sync.RWMutex
-	Map   map[string]Containers
+	UserSessionsMutex      sync.RWMutex
+	UserSessionsMap        map[SessionID]UserSessions
+	ContainerSessionsMutex sync.RWMutex
+	ContainerSessions      map[ContainerName]*ContainerSessionData
 }
 
 func ReplState() ReplStateService {
 	return ReplStateService{
-		Map: map[string]Containers{},
+		UserSessionsMap:   map[SessionID]UserSessions{},
+		ContainerSessions: map[ContainerName]*ContainerSessionData{},
 	}
 }
 
-func (repl *ReplStateService) AddContainer(sessionId string, name string, username string, password string) {
-	repl.Mutex.Lock()
-	defer repl.Mutex.Unlock()
+func (repl *ReplStateService) AddUserSession(sessionId string, name string, username string, password string) {
+	sid := SessionID(sessionId)
+	cname := ContainerName(name)
 
-	containers := Containers{}
-	if c, exists := repl.Map[sessionId]; exists {
-		containers = c
+	repl.UserSessionsMutex.Lock()
+	defer repl.UserSessionsMutex.Unlock()
+
+	sessions := UserSessions{}
+	if c, exists := repl.UserSessionsMap[sid]; exists {
+		sessions = c
 	} else {
-		repl.Map[sessionId] = containers
+		repl.UserSessionsMap[sid] = sessions
 	}
 
-	if _, exists := containers[name]; !exists {
-		containers[name] = ContainerData{
+	if _, exists := sessions[cname]; !exists {
+		sessions[cname] = UserSessionData{
+			Created:  time.Now(),
 			Username: username,
 			Password: password,
-			Sessions: map[string]http.Cookie{},
 		}
 	}
 }
 
-func (repl *ReplStateService) AddReplSession(sessionId string, name string, cookie http.Cookie) string {
-	repl.Mutex.Lock()
-	defer repl.Mutex.Unlock()
+func (repl *ReplStateService) AddContainerSession(name string) {
+	cname := ContainerName(name)
 
-	uid := uuid.New().String()
-
-	containers := Containers{}
-	if c, exists := repl.Map[sessionId]; exists {
-		containers = c
-	} else {
-		repl.Map[sessionId] = containers
+	repl.ContainerSessionsMutex.Lock()
+	session, exists := repl.ContainerSessions[cname]
+	if !exists {
+		session = &ContainerSessionData{}
+		repl.ContainerSessions[cname] = session
 	}
+	repl.ContainerSessionsMutex.Unlock()
 
-	data := ContainerData{
-		Sessions: map[string]http.Cookie{},
-	}
-	if d, exists := containers[name]; exists {
-		data = d
-	} else {
-		containers[name] = data
-	}
-
-	data.Sessions[uid] = cookie
-
-	return uid
+	session.Mutex.Lock()
+	session.SessionsCount++
+	session.LastAccessed = time.Now()
+	session.Mutex.Unlock()
 }
 
-func (repl *ReplStateService) GetContainerCredentials(sessionId string, name string) *ContainerCredentials {
-	repl.Mutex.RLock()
-	defer repl.Mutex.RUnlock()
+func (repl *ReplStateService) GetUserSessionData(sessionId string, name string) *UserSessionData {
+	repl.UserSessionsMutex.RLock()
+	defer repl.UserSessionsMutex.RUnlock()
 
-	if containers, exists := repl.Map[sessionId]; exists {
-		if data, exists := containers[name]; exists {
-			return &ContainerCredentials{
-				Username: data.Username,
-				Password: data.Password,
-			}
+	sid := SessionID(sessionId)
+	cname := ContainerName(name)
+
+	if userSessions, exists := repl.UserSessionsMap[sid]; exists {
+		if data, exists := userSessions[cname]; exists {
+			return &data
 		}
 	}
 
@@ -95,62 +93,60 @@ func (repl *ReplStateService) GetContainerCredentials(sessionId string, name str
 }
 
 func (repl *ReplStateService) GetContainerNames(sessionId string) []string {
-	repl.Mutex.RLock()
-	defer repl.Mutex.RUnlock()
-
+	sid := SessionID(sessionId)
 	names := []string{}
 
-	if containers, exists := repl.Map[sessionId]; exists {
-		for name := range containers {
-			names = append(names, name)
+	repl.UserSessionsMutex.RLock()
+	defer repl.UserSessionsMutex.RUnlock()
+
+	if userSessions, exists := repl.UserSessionsMap[sid]; exists {
+		for name := range userSessions {
+			names = append(names, string(name))
 		}
 	}
 
 	return names
 }
 
-func (repl *ReplStateService) GetReplSession(sessionId string, replUuid string) (*string, *http.Cookie, bool) {
-	repl.Mutex.RLock()
-	defer repl.Mutex.RUnlock()
+func (repl *ReplStateService) ContainerHasActiveSessions(name string) bool {
+	repl.UserSessionsMutex.RLock()
+	defer repl.UserSessionsMutex.RUnlock()
 
-	if containers, exists := repl.Map[sessionId]; exists {
-		for name, data := range containers {
-			if cookie, exists := data.Sessions[replUuid]; exists {
-				return &name, &cookie, true
-			}
-		}
-	}
-	return nil, nil, false
-}
+	cname := ContainerName(name)
 
-func (repl *ReplStateService) HasActiveReplSessions(sessionId string, name string) bool {
-	repl.Mutex.RLock()
-	defer repl.Mutex.RUnlock()
+	if containerData, exists := repl.ContainerSessions[cname]; exists {
+		containerData.Mutex.RLock()
+		defer containerData.Mutex.RUnlock()
 
-	if containers, exists := repl.Map[sessionId]; exists {
-		if data, exists := containers[name]; exists {
-			return len(data.Sessions) > 0
-		}
+		return containerData.SessionsCount > 0
 	}
 	return false
 }
 
-func (repl *ReplStateService) DeleteReplSession(sessionId string, name string, replUuid string) {
-	repl.Mutex.Lock()
-	defer repl.Mutex.Unlock()
+func (repl *ReplStateService) DeleteContainerSession(name string, callback func(string)) bool {
+	cname := ContainerName(name)
 
-	if containers, exists := repl.Map[sessionId]; exists {
-		if data, exists := containers[name]; exists {
-			delete(data.Sessions, replUuid)
+	repl.ContainerSessionsMutex.Lock()
+	defer repl.ContainerSessionsMutex.Unlock()
+
+	containerData, exists := repl.ContainerSessions[cname]
+
+	kill := false
+
+	if exists {
+		containerData.Mutex.Lock()
+		containerData.SessionsCount--
+		if containerData.SessionsCount < 1 {
+			kill = true
+			callback(name)
+			delete(repl.ContainerSessions, cname)
 		}
+		defer containerData.Mutex.Unlock()
 	}
+
+	return kill
 }
 
-func (repl *ReplStateService) DeleteContainer(name string) {
-	repl.Mutex.Lock()
-	defer repl.Mutex.Unlock()
+func (repl *ReplStateService) DeleteContainer(sessionId string, name string) {
 
-	for _, containers := range repl.Map {
-		delete(containers, name)
-	}
 }

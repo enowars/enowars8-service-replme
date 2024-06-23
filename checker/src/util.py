@@ -89,35 +89,7 @@ def shchain(cmds: List[ShellCommand] = [], validations: List[ShellCommand] = [])
     return ShellCommandChain(cmds, validations)
 
 
-async def create_user(
-    client: AsyncClient,
-    db: ChainDB,
-    logger: LoggerAdapter,
-) -> tuple[str, str, Cookies, str]:
-    username = "".join(random.choice(string.ascii_lowercase) for _ in range(60))
-    password = "".join(random.choice(string.ascii_lowercase) for _ in range(60))
-
-    logger.info(f"Creating user: {username}:{password}")
-    response = await client.post(
-        "/api/repl",
-        data={"username": username, "password": password},
-        follow_redirects=True,
-    )
-    logger.info(f"Server answered: {response.status_code} - {response.text}")
-
-    assert_equals(response.status_code < 300, True, "Creating user failed")
-
-    json = response.json()
-    replUuid = json["replUuid"]
-    assert_equals(replUuid is not None, True, "Did not receive a replUuid")
-    logger.info(f"Port: {replUuid}")
-
-    await db.set("credentials", (username, password))
-
-    return (username, password, response.cookies, replUuid)
-
-
-async def do_user_login(
+async def do_user_auth(
     client: AsyncClient, logger: LoggerAdapter, username: str, password: str
 ) -> tuple[Cookies, str]:
     response = await client.post(
@@ -125,31 +97,53 @@ async def do_user_login(
         data={"username": username, "password": password},
         follow_redirects=True,
     )
+
     logger.info(f"Server answered: {response.status_code} - {response.text}")
 
     assert_equals(response.status_code < 300, True, "Creating user failed")
 
     json = response.json()
-    replUuid = json["replUuid"]
-    assert_equals(replUuid is not None, True, "Did not receive a replUuid")
-    logger.info(f"Port: {replUuid}")
+    id = json["id"]
+    assert_equals(id is not None, True, "Did not receive a repl id")
+    logger.info(f"REPL-ID: {id}")
 
-    return (response.cookies, replUuid)
+    cookies = response.cookies
+
+    for k, v in cookies.items():
+        logger.info(f"Cookie: {k}={v}")
+
+    return (cookies, id)
+
+
+async def user_create(
+    client: AsyncClient,
+    db: ChainDB,
+    logger: LoggerAdapter,
+) -> tuple[str, Cookies, str]:
+    username = "".join(random.choice(string.ascii_lowercase) for _ in range(60))
+    password = "".join(random.choice(string.ascii_lowercase) for _ in range(60))
+
+    logger.info(f"Creating user: {username}:{password}")
+    (cookies, id) = await do_user_auth(client, logger, username, password)
+    await db.set("credentials", (username, password))
+
+    return (username, cookies, id)
 
 
 async def user_login(
     client: AsyncClient,
     db: ChainDB,
     logger: LoggerAdapter,
-) -> tuple[str, str, Cookies, str]:
+) -> tuple[Cookies, str]:
     try:
         (username, password) = await db.get("credentials")
     except KeyError:
         raise MumbleException("Missing database entry from putflag")
 
-    (cookies, replUuid) = await do_user_login(client, logger, username, password)
+    logger.info(f"Authenticating user: {username}:{password}")
+    (cookies, id) = await do_user_auth(client, logger, username, password)
 
-    return (username, password, cookies, replUuid)
+    return (cookies, id)
 
 
 def is_list_of_str(element):
@@ -165,8 +159,8 @@ async def get_sessions(
 ) -> List[str]:
     response = await client.get(
         "/api/user/sessions",
-        cookies=cookies,
         follow_redirects=True,
+        headers={"Cookie": "session=" + (cookies.get("session") or "")},
     )
     logger.info(f"Server answered: {response.status_code} - {response.text}")
     assert_equals(response.status_code < 300, True, "Getting sessions failed")
@@ -188,7 +182,7 @@ async def websocket_recv_until(
     match = None
 
     while match is None:
-        msg = await asyncio.wait_for(websocket.recv(), timeout=5)
+        msg = await asyncio.wait_for(websocket.recv(), timeout=10)
         if isinstance(msg, bytes):
             payload += msg.decode("utf-8")
         elif isinstance(msg, str):
@@ -212,10 +206,10 @@ async def terminal_websocket(
     address: str,
     logger: LoggerAdapter,
     cookies: Cookies,
-    replUuid: str,
+    id: str,
     actions: List[ShellCommand],
 ):
-    url = f"ws://{address}:6969/api/repl/{replUuid}"
+    url = f"ws://{address}:6969/api/repl/{id}"
     response = ""
     cookie = cookies.get("session")
     async with websockets.connect(

@@ -11,8 +11,10 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"replme/types"
+	"replme/util"
 
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -26,10 +28,11 @@ import (
 )
 
 type DockerService struct {
-	Context context.Context
-	Client  *client.Client
-	HostIP  string
-	ApiKey  string
+	Context  context.Context
+	Client   *client.Client
+	HostIP   string
+	ApiKey   string
+	MutexMap util.MutexMap
 }
 
 func Docker(apiKey string) DockerService {
@@ -57,10 +60,11 @@ func Docker(apiKey string) DockerService {
 	defer cli.Close()
 
 	return DockerService{
-		Context: ctx,
-		Client:  cli,
-		HostIP:  ip,
-		ApiKey:  apiKey,
+		Context:  ctx,
+		Client:   cli,
+		HostIP:   ip,
+		ApiKey:   apiKey,
+		MutexMap: *util.MutexMapNew(),
 	}
 }
 
@@ -110,28 +114,39 @@ func (docker *DockerService) BuildImage(imageDir string, tag string) {
 func (docker *DockerService) CreateContainer(
 	opts types.RunContainerOptions,
 ) (*container.CreateResponse, error) {
+	util.SLogger.Debugf("[%-25s] Creating container", fmt.Sprintf("NM:%s..", opts.ContainerName[:5]))
 
+	util.SLogger.Debugf("[%-25s] Creating volume \"etc\"", fmt.Sprintf("NM:%s..", opts.ContainerName[:5]))
+	start := time.Now()
 	volumeEtc, err := docker.Client.VolumeCreate(docker.Context, volume.CreateOptions{
 		Name: fmt.Sprintf("%s_etc", opts.ContainerName),
 	})
+	util.SLogger.Debugf("[%-25s] Creating volume \"etc\" took %v", fmt.Sprintf("NM:%s..", opts.ContainerName[:5]), time.Since(start))
 
 	if err != nil {
 		return nil, err
 	}
 
+	util.SLogger.Debugf("[%-25s] Creating volume \"home\"", fmt.Sprintf("NM:%s..", opts.ContainerName[:5]))
+	start = time.Now()
 	volumeHome, err := docker.Client.VolumeCreate(docker.Context, volume.CreateOptions{
 		Name: fmt.Sprintf("%s_home", opts.ContainerName),
 	})
+	util.SLogger.Debugf("[%-25s] Creating volume \"home\" took %v", fmt.Sprintf("NM:%s..", opts.ContainerName[:5]), time.Since(start))
 
 	if err != nil {
 		return nil, err
 	}
 
+	util.SLogger.Debugf("[%-25s] Creating volume \"home\"", fmt.Sprintf("NM:%s..", opts.ContainerName[:5]))
 	container, err := docker.Client.ContainerCreate(
 		docker.Context,
 		&container.Config{
 			Image: opts.ImageTag,
-			Env:   []string{fmt.Sprintf("API_KEY=%s", docker.ApiKey)},
+			Env: []string{
+				fmt.Sprintf("API_KEY=%s", docker.ApiKey),
+				"GIN_MODE=release",
+			},
 		},
 		&container.HostConfig{
 			PortBindings: opts.Ports,
@@ -146,6 +161,9 @@ func (docker *DockerService) CreateContainer(
 					Source: volumeHome.Name,
 					Target: "/home",
 				},
+			},
+			LogConfig: container.LogConfig{
+				Type: "none",
 			},
 		},
 		nil,
@@ -191,7 +209,8 @@ func (docker *DockerService) GetContainer(name string) (
 	})
 
 	if err != nil {
-		log.Fatal(err, " :could not get container list")
+		util.SLogger.Errorf("[%-25s] Failed to get container list: %s", fmt.Sprintf("NM:%s..", name), err.Error())
+		return nil, nil, false
 	}
 
 	for _, c := range container {
@@ -326,7 +345,6 @@ func (docker *DockerService) EnsureContainerStarted(
 		}
 
 		id = response.ID
-
 	}
 
 	if !running {

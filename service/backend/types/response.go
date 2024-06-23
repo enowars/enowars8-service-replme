@@ -7,3 +7,7 @@ type ErrorResponse struct {
 type CreateReplResponse struct {
 	ReplUuid string `json:"replUuid"`
 }
+
+type AddReplUserResponse struct {
+	Id string `json:"id"`
+}

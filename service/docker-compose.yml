@@ -1,22 +1,28 @@
 version: '3'
 
 services:
+  frontend:
+    container_name: replme-frontend
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    restart: "unless-stopped"
+
   backend:
     container_name: replme-backend
     depends_on:
       - dind
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.backend
     volumes:
       - docker-cert:/cert
       - api-key:/apikey
     environment:
       - DOCKER_CERT_PATH=/cert/client
       - DOCKER_TLS_VERIFY=true
+      - GIN_MODE=release
       - REPL_LOG=debug
-    ports:
-      - 6969:6969
     restart: "unless-stopped"
 
   dind:
@@ -26,10 +32,30 @@ services:
     environment:
       - DOCKER_TLS_CERTDIR=/certs
     restart: "unless-stopped"
+    logging:
+      driver: none
+    ulimits:
+      nproc: 79830
+      nofile:
+        soft: 262144
+        hard: 262144
     volumes:
       - docker-cert:/certs
       - docker-data:/var/lib/docker
       - app-data:/app/data/
+
+  nginx:
+    container_name: replme-nginx
+    depends_on:
+      - backend
+      - frontend
+    image: nginx:alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/replme.conf
+    ports:
+      - 6969:6969
+    restart: "unless-stopped"
+
 
 volumes:
   docker-cert:
