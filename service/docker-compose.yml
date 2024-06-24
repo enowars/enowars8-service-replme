@@ -18,11 +18,15 @@ services:
     volumes:
       - docker-cert:/cert
       - api-key:/apikey
+      - devenvs:/devenvs
+      - devenvs-tmp:/devenvs-tmp
+      - db-data:/dbdata
     environment:
       - DOCKER_CERT_PATH=/cert/client
       - DOCKER_TLS_VERIFY=true
       - GIN_MODE=release
       - REPL_LOG=debug
+      - REPL_SQLITE=/dbdata/replme.db
     restart: "unless-stopped"
 
   dind:
@@ -43,6 +47,7 @@ services:
       - docker-cert:/certs
       - docker-data:/var/lib/docker
       - app-data:/app/data/
+      - devenvs-tmp:/devenvs-tmp
 
   nginx:
     container_name: replme-nginx
@@ -62,4 +67,7 @@ volumes:
   docker-data:
   app-data:
   api-key:
+  devenvs:
+  devenvs-tmp:
+  db-data:
 

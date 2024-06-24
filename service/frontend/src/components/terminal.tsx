@@ -62,11 +62,12 @@ const DELAY = 1000;
 type TerminalProps = {
   id?: string,
   className?: string,
-  name: string,
+  path: string,
+  catchClose?: boolean,
 };
 
 const Terminal: React.FC<TerminalProps> = (props) => {
-  const { id, className, name } = props;
+  const { id, className, path, catchClose } = props;
 
   const { resolvedTheme } = useTheme();
 
@@ -87,7 +88,7 @@ const Terminal: React.FC<TerminalProps> = (props) => {
       return;
 
     const protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
-    let socketURL = protocol + (process.env.NEXT_PUBLIC_WS || location.host) + '/api/repl/';
+    let socketURL = protocol + (process.env.NEXT_PUBLIC_WS || location.host) + path;
     const terminal = new XTerm({
       allowProposedApi: true,
       fontFamily: '"DejaVuSansM Nerd Font", courier-new, courier, monospace',
@@ -115,20 +116,20 @@ const Terminal: React.FC<TerminalProps> = (props) => {
     async function connect() {
       for (let i = 0; i < RETRY; i++) {
         try {
-          socketURL += name;
           const socket = new WebSocket(socketURL);
           websocketRef.current = socket;
           socket.onopen = async () => {
             terminal.loadAddon(new AttachAddon(socket));
             fit.fit()
           };
-          window.onbeforeunload = function(e: any) {
-            if (e) {
-              e.returnValue = 'Leave site?';
-            }
-            // safari
-            return 'Leave site?';
-          };
+          if (catchClose)
+            window.onbeforeunload = function(e: any) {
+              if (e) {
+                e.returnValue = 'Leave site?';
+              }
+              // safari
+              return 'Leave site?';
+            };
           break;
         } catch (error) {
           // ignore
@@ -143,7 +144,8 @@ const Terminal: React.FC<TerminalProps> = (props) => {
     return () => {
       terminal.dispose();
       websocketRef.current?.close();
-      window.onbeforeunload = null;
+      if (catchClose)
+        window.onbeforeunload = null;
     }
   }, [terminalRef, websocketRef])
 

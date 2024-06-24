@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"regexp"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -27,6 +28,16 @@ func (user *UserController) Login(ctx *gin.Context) {
 		return
 	}
 
+	if len(credentials.Username) < 4 || len(credentials.Username) > 64 || !regexp.MustCompile(`^[a-zA-Z0-9]*$`).MatchString(credentials.Username) {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Illegal username"})
+		return
+	}
+
+	if len(credentials.Password) < 4 || len(credentials.Password) > 64 {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Illegal username"})
+		return
+	}
+
 	result, err := user.Service.Login(credentials.Username, credentials.Password)
 
 	if err != nil {
@@ -45,6 +56,16 @@ func (user *UserController) Register(ctx *gin.Context) {
 	var credentials = types.CredentialRequest{}
 	if err := ctx.ShouldBind(&credentials); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(credentials.Username) < 4 || len(credentials.Username) > 64 || !regexp.MustCompile(`^[a-zA-Z0-9]*$`).MatchString(credentials.Username) {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Illegal username"})
+		return
+	}
+
+	if len(credentials.Password) < 4 || len(credentials.Password) > 64 {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Illegal username"})
 		return
 	}
 

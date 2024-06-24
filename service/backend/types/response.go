@@ -11,3 +11,7 @@ type CreateReplResponse struct {
 type AddReplUserResponse struct {
 	Id string `json:"id"`
 }
+
+type CreateDevenvResponse struct {
+	DevenvUuid string `json:"devenvUuid"`
+}

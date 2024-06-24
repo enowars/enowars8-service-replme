@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"replme/controller"
+	"replme/database"
+	"replme/model"
 	"replme/service"
 	"replme/util"
 
@@ -14,22 +16,28 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(docker *service.DockerService) *gin.Engine {
+func NewRouter(docker *service.DockerService, devenvFilesPath string, devenvFilesTmpPath string) *gin.Engine {
 
 	logLevel, exists := os.LookupEnv("REPL_LOG")
 	if !exists {
 		logLevel = "info"
 	}
 
+	util.LoggerInit(logLevel)
+
+	util.SLogger.Info("Connecting to DB ..")
+	database.Connect()
+	util.SLogger.Info("Migrating DB ..")
+	database.Migrate()
+
 	setupCors := false
 	if _, exists := os.LookupEnv("REPL_CORS"); exists {
 		setupCors = true
 	}
 
-	util.LoggerInit(logLevel)
-
 	replState := service.ReplState()
-	userController := controller.NewUserController(&replState)
+	authController := controller.NewAuthController()
+	devenvController := controller.NewDevenvController(docker, devenvFilesPath, devenvFilesTmpPath)
 	replController := controller.NewReplController(docker, &replState)
 
 	cleanup := service.Cleanup(docker, &replState)
@@ -66,17 +74,92 @@ func NewRouter(docker *service.DockerService) *gin.Engine {
 
 	/////////////////////// API ///////////////////////
 
-	engine.GET(
-		"/api/user/sessions", userController.Sessions,
-	)
+	engine.POST("/api/auth/register", authController.Register)
+	engine.POST("/api/auth/login", authController.Login)
+	engine.GET("/api/auth/user", authController.GetUser)
+	engine.POST("/api/auth/logout", authController.Logout)
 
-	engine.POST(
-		"/api/repl", replController.Create,
-	)
+	devenvs := engine.Group("/api/devenv", func(ctx *gin.Context) {
+		session := sessions.Default(ctx)
+		authType := session.Get("auth_type")
+		currentUserId := session.Get("current_user_id")
+		if authType == nil || authType != "full" || currentUserId == nil || currentUserId == uint(0) {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, &gin.H{
+				"error": "Unauthorized",
+			})
+			return
+		}
 
-	engine.GET(
-		"/api/repl/:name", replController.Websocket,
-	)
+		var user []model.User
+		database.DB.Where("id = ?", currentUserId).Find(&user)
+
+		if len(user) == 0 {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, &gin.H{
+				"error": "User not found",
+			})
+			return
+		}
+
+		ctx.Set("current_user", user[0])
+		ctx.Next()
+	})
+
+	devenvs.GET("", devenvController.GetAll)
+	devenvs.POST("", devenvController.Create)
+
+	devenv := devenvs.Group("/:uuid", func(ctx *gin.Context) {
+		_user, _ := ctx.Get("current_user")
+		user := _user.(model.User)
+
+		id := ctx.Query("uuid")
+		if id == "" {
+			id = ctx.Param("uuid")
+		}
+		util.SLogger.Debugf("id: %s", id)
+		uuid := util.ExtractUuid(id)
+
+		if uuid == "" {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, &gin.H{
+				"error": "Invalid uuid",
+			})
+			return
+		}
+
+		var devenvs []model.Devenv
+		err := database.DB.Model(&user).Where("id = ?", uuid[:36]).Association("Devenvs").Find(&devenvs)
+
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, &gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		if len(devenvs) == 0 {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, &gin.H{
+				"error": "Devenv not found",
+			})
+			return
+		}
+
+		ctx.Set("uuid", uuid)
+		ctx.Set("current_devenv", devenvs[0])
+		ctx.Next()
+	})
+
+	devenv.GET("", devenvController.GetOne)
+	devenv.PATCH("", devenvController.Patch)
+	devenv.GET("/files", devenvController.GetFiles)
+	devenv.POST("/files", devenvController.CreateFile)
+	devenv.GET("/files/:name", devenvController.GetFileContent)
+	devenv.POST("/files/:name", devenvController.SetFileContent)
+	devenv.DELETE("/files/:name", devenvController.DeleteFile)
+	devenv.GET("/exec", devenvController.Exec)
+
+	engine.POST("/api/repl", replController.Create)
+	engine.GET("/api/repl/sessions", replController.Sessions)
+
+	engine.GET("/api/repl/:name", replController.Websocket)
 
 	return engine
 }

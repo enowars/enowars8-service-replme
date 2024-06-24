@@ -147,6 +147,18 @@ func (repl *ReplStateService) DeleteContainerSession(name string, callback func(
 	return kill
 }
 
-func (repl *ReplStateService) DeleteContainer(sessionId string, name string) {
+func (repl *ReplStateService) DeleteContainer(name string) {
+	cname := ContainerName(name)
 
+	repl.ContainerSessionsMutex.Lock()
+	delete(repl.ContainerSessions, cname)
+	repl.ContainerSessionsMutex.Unlock()
+
+	repl.UserSessionsMutex.Lock()
+	for _, session := range repl.UserSessionsMap {
+		if _, exists := session[cname]; exists {
+			delete(session, cname)
+		}
+	}
+	repl.UserSessionsMutex.Unlock()
 }

@@ -5,8 +5,8 @@ import (
 	"replme/util"
 )
 
-func Init(docker *service.DockerService) {
-	engine := NewRouter(docker)
+func Init(docker *service.DockerService, devenvFilesPath string, devenvFilesTmpPath string) {
+	engine := NewRouter(docker, devenvFilesPath, devenvFilesTmpPath)
 	util.SLogger.Infof("Server is running on port 6969")
 	engine.Run(":6969")
 }

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"replme/database"
+	"replme/model"
 	"replme/util"
 	"time"
 )
@@ -31,8 +33,8 @@ func (cleanup *CleanupService) DoCleanup() {
 		if created.Before(cutoffTime) {
 			util.SLogger.Debugf("Removing container: %s", container.Names[0][:10])
 			cleanup.Docker.RemoveContainerById(container.ID)
-			// name := container.Names[0][1:] // [1:] because name starts with '/'
-			// cleanup.ReplState.DeleteContainer(name)
+			name := container.Names[0][1:] // [1:] because name starts with '/'
+			cleanup.ReplState.DeleteContainer(name)
 		}
 	}
 
@@ -40,6 +42,12 @@ func (cleanup *CleanupService) DoCleanup() {
 	start := time.Now()
 	cleanup.Docker.VolumesPrune()
 	util.SLogger.Debugf("Pruning volumes [%v]", time.Since(start))
+
+	util.SLogger.Debug("Cleaning database starting ..")
+	start = time.Now()
+	database.DB.Unscoped().Where("created_at < ?", cutoffTime).Delete(&model.Devenv{})
+	database.DB.Unscoped().Where("created_at < ?", cutoffTime).Delete(&model.User{})
+	util.SLogger.Debugf("Cleaning database [%v]", time.Since(start))
 }
 
 func (cleanup *CleanupService) StartTask() *chan struct{} {

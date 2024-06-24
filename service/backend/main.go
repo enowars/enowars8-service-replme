@@ -12,9 +12,13 @@ import (
 func main() {
 	var imagePath string
 	var apiKeyPath string
+	var devenvFiles string
+	var devenvFilesTmp string
 
 	flag.StringVar(&imagePath, "i", "", "Image directory (required)")
 	flag.StringVar(&apiKeyPath, "k", "", "Apikey file (required)")
+	flag.StringVar(&devenvFiles, "f", "", "Devenv files (required)")
+	flag.StringVar(&devenvFilesTmp, "t", "", "Devenv files tmp (required)")
 
 	flag.Parse()
 
@@ -29,5 +33,5 @@ func main() {
 	docker := service.Docker(apiKey)
 	docker.BuildImage(imagePath, imageTag)
 
-	server.Init(&docker)
+	server.Init(&docker, devenvFiles, devenvFilesTmp)
 }

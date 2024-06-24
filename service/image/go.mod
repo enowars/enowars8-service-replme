@@ -7,7 +7,6 @@ require (
 	github.com/gin-contrib/sessions v1.0.1
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gorilla/websocket v1.5.3
-	golang.org/x/term v0.20.0
 )
 
 require (

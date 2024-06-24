@@ -6,8 +6,6 @@ import (
 )
 
 func main() {
-
 	apiKey := os.Getenv("API_KEY")
-
 	server.Init(apiKey)
 }

@@ -1,10 +1,10 @@
 package server
 
 import (
-	"image-go/util"
 	"net/http"
 
 	"image-go/controller"
+	"image-go/util"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/memstore"
@@ -47,6 +47,7 @@ func NewRouter(apiKey string) *gin.Engine {
 	})
 
 	term.GET("", termController.Websocket)
+	term.GET("/exec", termController.WebsocketExec)
 
 	return engine
 }

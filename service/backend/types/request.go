@@ -25,7 +25,28 @@ type RequestOptions struct {
 	Cookies []*http.Cookie
 }
 
+type CreateReplRequest struct {
+	Username string `form:"username" json:"username" xml:"username" binding:"required"`
+	Password string `form:"password" json:"password" xml:"password" binding:"required"`
+}
+
 type LoginRequest struct {
 	Username string `form:"username" json:"username" xml:"username" binding:"required"`
 	Password string `form:"password" json:"password" xml:"password" binding:"required"`
+}
+
+type CreateDevenvRequest struct {
+	Name     string `json:"name" binding:"required"`
+	BuildCmd string `json:"buildCmd"`
+	RunCmd   string `json:"runCmd"`
+}
+
+type PatchDevenvRequest struct {
+	Name     string `json:"name"`
+	BuildCmd string `json:"buildCmd"`
+	RunCmd   string `json:"runCmd"`
+}
+
+type CreateFileRequest struct {
+	Name string `json:"name"`
 }

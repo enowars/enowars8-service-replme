@@ -9,11 +9,13 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/creack/pty"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+
 	// xterm "golang.org/x/term"
 
 	"image-go/types"
@@ -89,6 +91,81 @@ func (term *TermService) Create(ctx *gin.Context, websocket *websocket.Conn, use
 		Gid: user.Gid,
 	}
 	cmd.Dir = user.Home
+	cmd.Env = []string{
+		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
+		"COLORTERM=truecolor",
+		"TERM=xterm",
+	}
+
+	ptmx, err := pty.Start(cmd)
+	defer func() { cmd.Process.Kill() }()
+	if err != nil {
+		ctx.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	defer func() { _ = ptmx.Close() }()
+
+	pty.Setsize(ptmx, &pty.Winsize{})
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGWINCH)
+	go func() {
+		for range ch {
+			if err := pty.InheritSize(os.Stdin, ptmx); err != nil {
+				log.Printf("error resizing pty: %s", err)
+			}
+		}
+	}()
+	ch <- syscall.SIGWINCH
+	defer func() { signal.Stop(ch); close(ch) }()
+
+	// oldState, err := xterm.MakeRaw(int(os.Stdin.Fd()))
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer func() { _ = xterm.Restore(int(os.Stdin.Fd()), oldState) }()
+
+	wsrw := WebsocketReadWriter{
+		Conn: websocket,
+		Pty:  ptmx,
+	}
+
+	errc := make(chan error, 2)
+	go func() {
+		_, err := io.Copy(wsrw, ptmx)
+		errc <- err
+	}()
+	go func() {
+		_, err := io.Copy(ptmx, wsrw)
+		errc <- err
+	}()
+
+	if err := <-errc; err != nil {
+		log.Printf("WebSocket proxy error: %v", err)
+	}
+}
+
+func (term *TermService) Exec(
+	ctx *gin.Context,
+	websocket *websocket.Conn,
+	user *types.UserPasswdData,
+	cwd string,
+	command string,
+) {
+	cmd := exec.Command(
+		"/bin/sh",
+		"-c",
+		fmt.Sprintf(
+			"%s && echo SUCCEEDED || echo FAILED",
+			strings.ReplaceAll(command, "\"", "\\\""),
+		),
+	)
+	cmd.SysProcAttr = &syscall.SysProcAttr{}
+	cmd.SysProcAttr.Credential = &syscall.Credential{
+		Uid: user.Uid,
+		Gid: user.Gid,
+	}
+	cmd.Dir = cwd
 	cmd.Env = []string{
 		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
 		"COLORTERM=truecolor",

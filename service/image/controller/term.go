@@ -51,3 +51,34 @@ func (term *TermController) Websocket(ctx *gin.Context) {
 
 	term.TermService.Create(ctx, conn, user)
 }
+
+func (term *TermController) WebsocketExec(ctx *gin.Context) {
+	cwd := ctx.Query("cwd")
+	command := ctx.Query("command")
+
+	if cwd == "" || command == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Bad query params"})
+		ctx.Abort()
+		return
+	}
+
+	session := sessions.Default(ctx)
+	username := session.Get("username").(string)
+
+	user, errResp := term.UserService.GetUserData(username)
+
+	if errResp != nil {
+		ctx.JSON(errResp.Code, gin.H{"error": errResp.Message})
+		ctx.Abort()
+		return
+	}
+
+	conn, err := term.Upgrader.Upgrade(ctx.Writer, ctx.Request, nil)
+	if err != nil {
+		ctx.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	defer conn.Close()
+
+	term.TermService.Exec(ctx, conn, user, cwd, command)
+}

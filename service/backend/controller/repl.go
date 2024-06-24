@@ -36,18 +36,18 @@ func NewReplController(docker *service.DockerService, replState *service.ReplSta
 }
 
 func (repl *ReplController) Create(ctx *gin.Context) {
-	var loginRequest types.LoginRequest
-	if err := ctx.ShouldBind(&loginRequest); err != nil {
+	var createReplRequest types.CreateReplRequest
+	if err := ctx.ShouldBind(&createReplRequest); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	util.SLogger.Debugf("[%-25s] Creating new REPL user", fmt.Sprintf("UN:%s..", loginRequest.Username[:5]))
+	util.SLogger.Debugf("[%-25s] Creating new REPL user", fmt.Sprintf("UN:%s..", createReplRequest.Username[:5]))
 
-	hash := repl.CRC.Calculate(util.DecodeSpecialChars([]byte(loginRequest.Username)))
+	hash := repl.CRC.Calculate(util.DecodeSpecialChars([]byte(createReplRequest.Username)))
 	name := fmt.Sprintf("%x", hash)
 
-	util.SLogger.Debugf("[%-25s] Created new REPL user", fmt.Sprintf("UN:%s.. | NM:%s..", loginRequest.Username[:5], name[:5]))
+	util.SLogger.Debugf("[%-25s] Created new REPL user", fmt.Sprintf("UN:%s.. | NM:%s..", createReplRequest.Username[:5], name[:5]))
 
 	session := sessions.Default(ctx)
 	auth_type := session.Get("auth_type")
@@ -56,14 +56,28 @@ func (repl *ReplController) Create(ctx *gin.Context) {
 		session.Save()
 	}
 
-	util.SLogger.Debugf("[%-25s] Saving session %s..", fmt.Sprintf("UN:%s.. | NM:%s..", loginRequest.Username[:5], name[:5]), session.ID()[:5])
+	util.SLogger.Debugf("[%-25s] Saving session %s..", fmt.Sprintf("UN:%s.. | NM:%s..", createReplRequest.Username[:5], name[:5]), session.ID()[:5])
 
-	repl.ReplState.AddUserSession(session.ID(), name, loginRequest.Username, loginRequest.Password)
+	repl.ReplState.AddUserSession(session.ID(), name, createReplRequest.Username, createReplRequest.Password)
 
 	ctx.JSON(http.StatusOK, types.AddReplUserResponse{
 		Id: name,
 	})
 	return
+}
+
+func (repl *ReplController) Sessions(ctx *gin.Context) {
+	session := sessions.Default(ctx)
+	auth_type := session.Get("auth_type")
+	if session.ID() == "" || auth_type == nil {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, types.ErrorResponse{
+			Error: "Unauthorized",
+		})
+		return
+	}
+	util.SLogger.Debugf("[%-25s] Get sessions", fmt.Sprintf("ID:%s..", session.ID()[:5]))
+	names := repl.ReplState.GetContainerNames(session.ID())
+	ctx.JSON(http.StatusOK, names)
 }
 
 func (repl *ReplController) Websocket(ctx *gin.Context) {
@@ -113,7 +127,7 @@ func (repl *ReplController) Websocket(ctx *gin.Context) {
 	util.SLogger.Debugf("[%-25s] Creating container", fmt.Sprintf("UN:%s.. | NM:%s..", user.Username[:5], name[:5]))
 
 	lock := repl.Docker.MutexMap.Lock(name)
-	_, port, err := repl.Docker.EnsureContainerStarted(name)
+	_, port, err := repl.Docker.EnsureReplContainerStarted(name)
 	lock.Unlock()
 
 	if err != nil {
@@ -151,7 +165,7 @@ func (repl *ReplController) Websocket(ctx *gin.Context) {
 	}
 
 	defer clientConn.Close()
-	err = p.CreateWebsocketPipe(clientConn, *cookie)
+	err = p.CreateReplWebsocketPipe(clientConn, *cookie)
 	if err != nil {
 		ctx.AbortWithError(http.StatusBadRequest, err)
 		return

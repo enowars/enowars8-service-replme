@@ -89,7 +89,142 @@ def shchain(cmds: List[ShellCommand] = [], validations: List[ShellCommand] = [])
     return ShellCommandChain(cmds, validations)
 
 
-async def do_user_auth(
+async def do_user_register(
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    username: str,
+    password: str,
+):
+    response = await client.post(
+        "/api/auth/register",
+        data={"username": username, "password": password},
+        follow_redirects=True,
+    )
+
+    logger.info(f"Server answered: {response.status_code} - {response.text}")
+
+    assert_equals(response.status_code < 300, True, "Creating user failed")
+
+
+async def user_register(
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    db: ChainDB,
+) -> tuple[str, str]:
+    username = "".join(random.choice(string.ascii_lowercase) for _ in range(35))
+    password = "".join(random.choice(string.ascii_lowercase) for _ in range(35))
+
+    logger.info(f"Creating user: {username}:{password}")
+    await do_user_register(client, logger, username, password)
+    await db.set("credentials", (username, password))
+
+    return (username, password)
+
+
+async def do_user_login(
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    username: str,
+    password: str,
+) -> Cookies:
+    response = await client.post(
+        "/api/auth/login",
+        data={"username": username, "password": password},
+        follow_redirects=True,
+    )
+
+    logger.info(f"Server answered: {response.status_code} - {response.text}")
+
+    assert_equals(response.status_code < 300, True, "Creating user failed")
+
+    cookies = response.cookies
+
+    for k, v in cookies.items():
+        logger.info(f"Cookie: {k}={v}")
+
+    return cookies
+
+
+async def user_login(
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    db: ChainDB,
+) -> Cookies:
+    try:
+        (username, password) = await db.get("credentials")
+    except KeyError:
+        raise MumbleException("Missing database entry from putflag")
+
+    logger.info(f"Authenticating user: {username}:{password}")
+    cookies = await do_user_login(client, logger, username, password)
+
+    return cookies
+
+
+async def do_create_devenv(
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    cookies: Cookies,
+    name: str,
+    buildCmd: str,
+    runCmd: str,
+) -> str:
+    response = await client.post(
+        "/api/devenv",
+        json={
+            "name": name,
+            "buildCmd": buildCmd,
+            "runCmd": runCmd,
+        },
+        follow_redirects=True,
+        headers={"Cookie": "session=" + (cookies.get("session") or "")},
+    )
+    logger.info(f"Server answered: {response.status_code} - {response.text}")
+    assert_equals(response.status_code < 300, True, "Creating devenv failed")
+
+    json = response.json()
+    devenvUuid = json["devenvUuid"]
+    assert_equals(id is not None, True, "Did not receive a devenvUuid")
+    logger.info(f"DevenvUuid: {devenvUuid}")
+
+    return devenvUuid
+
+
+async def create_devenv(
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    cookies: Cookies,
+    buildCmd: str,
+    runCmd: str,
+) -> str:
+    logger.info("Creating devenv")
+    name = "".join(random.choice(string.ascii_lowercase) for _ in range(10))
+    devenvUuid = await do_create_devenv(client, logger, cookies, name, buildCmd, runCmd)
+    return devenvUuid
+
+
+async def do_set_devenv_file_content(
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    cookies: Cookies,
+    devenvUuid: str,
+    filename: str,
+    content: str,
+):
+    response = await client.post(
+        "/api/devenv/" + devenvUuid + "/files/" + filename,
+        content=content,
+        follow_redirects=True,
+        headers={
+            "Content-Type": "text/plain",
+            "Cookie": "session=" + (cookies.get("session") or ""),
+        },
+    )
+    logger.info(f"Server answered: {response.status_code} - {response.text}")
+    assert_equals(response.status_code < 300, True, "Setting file content failed")
+
+
+async def do_repl_auth(
     client: AsyncClient, logger: LoggerAdapter, username: str, password: str
 ) -> tuple[Cookies, str]:
     response = await client.post(
@@ -100,7 +235,7 @@ async def do_user_auth(
 
     logger.info(f"Server answered: {response.status_code} - {response.text}")
 
-    assert_equals(response.status_code < 300, True, "Creating user failed")
+    assert_equals(response.status_code < 300, True, "Creating repl user failed")
 
     json = response.json()
     id = json["id"]
@@ -115,7 +250,7 @@ async def do_user_auth(
     return (cookies, id)
 
 
-async def user_create(
+async def repl_create(
     client: AsyncClient,
     db: ChainDB,
     logger: LoggerAdapter,
@@ -123,14 +258,14 @@ async def user_create(
     username = "".join(random.choice(string.ascii_lowercase) for _ in range(60))
     password = "".join(random.choice(string.ascii_lowercase) for _ in range(60))
 
-    logger.info(f"Creating user: {username}:{password}")
-    (cookies, id) = await do_user_auth(client, logger, username, password)
+    logger.info(f"Creating repl: {username}:{password}")
+    (cookies, id) = await do_repl_auth(client, logger, username, password)
     await db.set("credentials", (username, password))
 
     return (username, cookies, id)
 
 
-async def user_login(
+async def repl_login(
     client: AsyncClient,
     db: ChainDB,
     logger: LoggerAdapter,
@@ -140,8 +275,8 @@ async def user_login(
     except KeyError:
         raise MumbleException("Missing database entry from putflag")
 
-    logger.info(f"Authenticating user: {username}:{password}")
-    (cookies, id) = await do_user_auth(client, logger, username, password)
+    logger.info(f"Authenticating repl user: {username}:{password}")
+    (cookies, id) = await do_repl_auth(client, logger, username, password)
 
     return (cookies, id)
 
@@ -158,16 +293,16 @@ async def get_sessions(
     logger: LoggerAdapter,
 ) -> List[str]:
     response = await client.get(
-        "/api/user/sessions",
+        "/api/repl/sessions",
         follow_redirects=True,
         headers={"Cookie": "session=" + (cookies.get("session") or "")},
     )
     logger.info(f"Server answered: {response.status_code} - {response.text}")
-    assert_equals(response.status_code < 300, True, "Getting sessions failed")
+    assert_equals(response.status_code < 300, True, "Getting repl sessions failed")
 
     json = response.json()
     assert_equals(is_list_of_str(json), True, "Did not receive valid sessions obj")
-    logger.info(f"Sessions: {json}")
+    logger.info(f"Repl-Sessions: {json}")
 
     return json
 
@@ -202,7 +337,7 @@ async def websocket_recv_until(
     return payload
 
 
-async def terminal_websocket(
+async def repl_websocket(
     address: str,
     logger: LoggerAdapter,
     cookies: Cookies,
@@ -226,4 +361,22 @@ async def terminal_websocket(
             logger.info("Got: " + _response)
             response += _response
 
+    return response
+
+
+async def devenv_websocket(
+    address: str,
+    logger: LoggerAdapter,
+    cookies: Cookies,
+    devenvUuid: str,
+    expect: str,
+    query: str = "",
+):
+    url = f"ws://{address}:6969/api/devenv/{devenvUuid}/exec{query}"
+    response = ""
+    cookie = cookies.get("session")
+    async with websockets.connect(
+        url, extra_headers={"Cookie": f"session={cookie}"}
+    ) as websocket:
+        response = await websocket_recv_until(websocket, expect, None)
     return response

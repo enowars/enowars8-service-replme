@@ -119,24 +119,11 @@ func (proxy *ProxyService) SendRegisterRequest(
 	return response, nil
 }
 
-func (proxy *ProxyService) CreateWebsocketPipe(clientConn *websocket.Conn, cookie http.Cookie) error {
-	targetURL, err := url.Parse(
-		fmt.Sprintf(
-			"ws://%s:%d/api/%s/term",
-			proxy.Target.IP,
-			proxy.Target.Port,
-			proxy.Target.ApiKey,
-		),
-	)
-
-	if err != nil {
-		return err
-	}
-
-	util.SLogger.Debugf("[..] -> [%s:%d] Dialing websocket", proxy.Target.IP, proxy.Target.Port)
+func (proxy *ProxyService) createWebsocketPipe(clientConn *websocket.Conn, cookie http.Cookie, url string) error {
+	util.SLogger.Debugf("[..] -> [%s:%d] Dialing websocket: %s", proxy.Target.IP, proxy.Target.Port, url)
 	start := time.Now()
 	targetConn, _, err := websocket.DefaultDialer.Dial(
-		targetURL.String(),
+		url,
 		http.Header{
 			"Cookie": []string{
 				cookie.String(),
@@ -171,4 +158,40 @@ func (proxy *ProxyService) CreateWebsocketPipe(clientConn *websocket.Conn, cooki
 	}
 
 	return nil
+}
+
+func (proxy *ProxyService) CreateReplWebsocketPipe(clientConn *websocket.Conn, cookie http.Cookie) error {
+	targetURL, err := url.Parse(
+		fmt.Sprintf(
+			"ws://%s:%d/api/%s/term",
+			proxy.Target.IP,
+			proxy.Target.Port,
+			proxy.Target.ApiKey,
+		),
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return proxy.createWebsocketPipe(clientConn, cookie, targetURL.String())
+}
+
+func (proxy *ProxyService) CreateExecWebsocketPipe(clientConn *websocket.Conn, cookie http.Cookie, cwd string, command string) error {
+	targetURL, err := url.Parse(
+		fmt.Sprintf(
+			"ws://%s:%d/api/%s/term/exec?cwd=%s&command=%s",
+			proxy.Target.IP,
+			proxy.Target.Port,
+			proxy.Target.ApiKey,
+			url.QueryEscape(cwd),
+			url.QueryEscape(command),
+		),
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return proxy.createWebsocketPipe(clientConn, cookie, targetURL.String())
 }
