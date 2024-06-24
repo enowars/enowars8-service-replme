@@ -2,6 +2,7 @@ package util
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -76,8 +77,10 @@ func DeleteDir(path string) error {
 	return os.RemoveAll(path)
 }
 
-func CopyRecurse(src string, target string) error {
+func CopyRecurse(src string, target string, perm fs.FileMode) error {
 	return cp.Copy(src, target, cp.Options{
-		OnSymlink: func(string) cp.SymlinkAction { return cp.Skip },
+		OnSymlink:     func(string) cp.SymlinkAction { return cp.Skip },
+		AddPermission: perm,
 	})
 }
+

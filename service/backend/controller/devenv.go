@@ -309,9 +309,10 @@ func (devenv *DevenvController) Exec(ctx *gin.Context) {
 	tmpUuid := guuid.New().String()
 
 	target := filepath.Join(devenv.DevenvFilesPathTmp, tmpUuid)
+	mount := filepath.Join("/tmp", tmpUuid)
 	util.SLogger.Debugf("Copying %s -> %s", src, target)
 
-	err := util.CopyRecurse(src, target)
+	err := util.CopyRecurse(src, target, 0777)
 	if err != nil {
 		util.SLogger.Warnf("Copying devenv container failed, %s", err.Error())
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, types.ErrorResponse{
@@ -328,7 +329,7 @@ func (devenv *DevenvController) Exec(ctx *gin.Context) {
 		}
 	}()
 
-	id, _, port, err := devenv.Docker.EnsureDevenvContainerStarted(target)
+	id, _, port, err := devenv.Docker.EnsureDevenvContainerStarted(target, mount)
 
 	if err != nil {
 		util.SLogger.Warnf("Creating devenv container failed, %s", err.Error())
@@ -378,7 +379,7 @@ func (devenv *DevenvController) Exec(ctx *gin.Context) {
 	}
 
 	defer clientConn.Close()
-	err = p.CreateExecWebsocketPipe(clientConn, *cookie, target, command)
+	err = p.CreateExecWebsocketPipe(clientConn, *cookie, mount, command)
 	if err != nil {
 		ctx.AbortWithError(http.StatusBadRequest, err)
 		return

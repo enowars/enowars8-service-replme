@@ -177,6 +177,7 @@ func (docker *DockerService) CreateReplContainer(
 
 func (docker *DockerService) CreateDevenvContainer(
 	devenvPath string,
+	mountPath string,
 	opts types.RunContainerOptions,
 ) (*container.CreateResponse, error) {
 	util.SLogger.Debugf("[%-25s] Creating container", fmt.Sprintf("NM:%s..", opts.ContainerName[:5]))
@@ -196,7 +197,7 @@ func (docker *DockerService) CreateDevenvContainer(
 				{
 					Type:   mount.TypeBind,
 					Source: devenvPath,
-					Target: devenvPath,
+					Target: mountPath,
 				},
 			},
 			LogConfig: container.LogConfig{
@@ -404,9 +405,11 @@ func (docker *DockerService) EnsureReplContainerStarted(
 
 func (docker *DockerService) EnsureDevenvContainerStarted(
 	devenvPath string,
+	mountPath string,
 ) (*string, *string, *uint16, error) {
 	response, err := docker.CreateDevenvContainer(
 		devenvPath,
+		mountPath,
 		types.RunContainerOptions{
 			ImageTag:      "ptwhy",
 			ContainerName: uuid.NewString(),
