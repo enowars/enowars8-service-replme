@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 
 	cp "github.com/otiai10/copy"
 )
@@ -84,3 +85,41 @@ func CopyRecurse(src string, target string, perm fs.FileMode) error {
 	})
 }
 
+func GetFileModTime(path string) (time.Time, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return info.ModTime(), nil
+}
+
+func DeleteDirsOlderThan(path string, t time.Time) {
+	dir, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer dir.Close()
+
+	files, err := dir.Readdir(0)
+	if err != nil {
+		return
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			child := filepath.Join(path, file.Name())
+			modTime, err := GetFileModTime(child)
+			if err != nil {
+				continue
+			}
+			if modTime.Before(t) {
+				SLogger.Debugf("Deleting directory %s", child)
+				err = DeleteDir(child)
+				if err != nil {
+					continue
+				}
+			}
+		}
+	}
+}

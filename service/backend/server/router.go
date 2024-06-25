@@ -40,7 +40,7 @@ func NewRouter(docker *service.DockerService, devenvFilesPath string, devenvFile
 	devenvController := controller.NewDevenvController(docker, devenvFilesPath, devenvFilesTmpPath)
 	replController := controller.NewReplController(docker, &replState)
 
-	cleanup := service.Cleanup(docker, &replState)
+	cleanup := service.Cleanup(docker, &replState, devenvFilesPath, devenvFilesTmpPath)
 	cleanup.DoCleanup()
 	cleanup.StartTask()
 

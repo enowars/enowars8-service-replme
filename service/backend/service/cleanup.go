@@ -8,14 +8,18 @@ import (
 )
 
 type CleanupService struct {
-	Docker    *DockerService
-	ReplState *ReplStateService
+	Docker             *DockerService
+	ReplState          *ReplStateService
+	DevenvFilesPath    string
+	DevenvFilesTmpPath string
 }
 
-func Cleanup(docker *DockerService, replState *ReplStateService) CleanupService {
+func Cleanup(docker *DockerService, replState *ReplStateService, devenvFilesPath string, devenvFilesTmpPath string) CleanupService {
 	return CleanupService{
-		Docker:    docker,
-		ReplState: replState,
+		Docker:             docker,
+		ReplState:          replState,
+		DevenvFilesPath:    devenvFilesPath,
+		DevenvFilesTmpPath: devenvFilesTmpPath,
 	}
 }
 
@@ -48,6 +52,13 @@ func (cleanup *CleanupService) DoCleanup() {
 	database.DB.Unscoped().Where("created_at < ?", cutoffTime).Delete(&model.Devenv{})
 	database.DB.Unscoped().Where("created_at < ?", cutoffTime).Delete(&model.User{})
 	util.SLogger.Debugf("Cleaning database [%v]", time.Since(start))
+
+	util.SLogger.Debug("Cleaning devenvs starting ..")
+	start = time.Now()
+	util.DeleteDirsOlderThan(cleanup.DevenvFilesPath, cutoffTime)
+	util.DeleteDirsOlderThan(cleanup.DevenvFilesTmpPath, cutoffTime)
+	util.SLogger.Debugf("Cleaning devenvs [%v]", time.Since(start))
+
 }
 
 func (cleanup *CleanupService) StartTask() *chan struct{} {
