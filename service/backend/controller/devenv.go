@@ -245,6 +245,11 @@ func (devenv *DevenvController) SetFileContent(ctx *gin.Context) {
 	_devenv, _ := ctx.Get("current_devenv")
 	currentDevenv := _devenv.(model.Devenv)
 
+	if ctx.Request.ContentLength > 1024 {
+		ctx.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "Max filesize is 1KB"})
+		return
+	}
+
 	name := ctx.Param("name")
 
 	if !util.IsValidFilename(name) {
