@@ -20,7 +20,7 @@ const ReplMenu = () => {
   const query = useQuery(
     {
       queryKey: ["repl-sessions"],
-      queryFn: () => axios.get<string[]>(process.env.NEXT_PUBLIC_API + '/api/repl/sessions', { withCredentials: true }),
+      queryFn: () => axios.get<string[]>((process.env.NEXT_PUBLIC_API ?? "") + '/api/repl/sessions', { withCredentials: true }),
     }
   )
 

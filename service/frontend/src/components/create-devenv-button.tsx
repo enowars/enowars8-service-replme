@@ -15,7 +15,7 @@ const CreateDevenvButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const mutation = useMutation({
       mutationFn: (credentials: CreateDevenvRequest) => axios.post<CreateDevenvResponse>(
-        process.env.NEXT_PUBLIC_API + '/api/devenv',
+        (process.env.NEXT_PUBLIC_API ?? "") + '/api/devenv',
         credentials,
         {
           withCredentials: true

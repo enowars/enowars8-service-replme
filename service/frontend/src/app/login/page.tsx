@@ -30,7 +30,7 @@ export default function Page() {
 
   const mutation = useMutation({
     mutationFn: (credentials: LoginForm) => axios.post(
-      process.env.NEXT_PUBLIC_API + '/api/auth/login',
+      (process.env.NEXT_PUBLIC_API ?? "") + '/api/auth/login',
       credentials,
       {
         withCredentials: true

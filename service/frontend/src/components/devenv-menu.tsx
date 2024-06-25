@@ -21,7 +21,7 @@ const DevenvMenu = () => {
   const query = useQuery(
     {
       queryKey: ["devenvs"],
-      queryFn: () => axios.get<Devenv[]>(process.env.NEXT_PUBLIC_API + '/api/devenv', { withCredentials: true }),
+      queryFn: () => axios.get<Devenv[]>((process.env.NEXT_PUBLIC_API ?? "") + '/api/devenv', { withCredentials: true }),
     }
   )
 

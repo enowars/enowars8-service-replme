@@ -37,7 +37,7 @@ const FileTree: React.FC<FileTreeProps> = (props) => {
   const filesQuery = useQuery({
     queryKey: ['devenv', devenvUuid, 'files'],
     queryFn: () => axios.get<string[]>(
-      process.env.NEXT_PUBLIC_API + "/api/devenv/" + devenvUuid + "/files",
+      (process.env.NEXT_PUBLIC_API ?? "") + "/api/devenv/" + devenvUuid + "/files",
       {
         withCredentials: true
       }
@@ -51,7 +51,7 @@ const FileTree: React.FC<FileTreeProps> = (props) => {
 
   const createFileMutation = useMutation({
     mutationFn: (file: CreateFileForm) => axios.post(
-      process.env.NEXT_PUBLIC_API + '/api/devenv/' + devenvUuid + "/files",
+      (process.env.NEXT_PUBLIC_API ?? "") + '/api/devenv/' + devenvUuid + "/files",
       file,
       {
         withCredentials: true
@@ -74,7 +74,7 @@ const FileTree: React.FC<FileTreeProps> = (props) => {
 
   const deleteFileMutation = useMutation({
     mutationFn: (filename: string) => axios.delete(
-      process.env.NEXT_PUBLIC_API + '/api/devenv/' + devenvUuid + "/files/" + encodeURI(filename),
+      (process.env.NEXT_PUBLIC_API ?? "") + '/api/devenv/' + devenvUuid + "/files/" + encodeURI(filename),
       {
         withCredentials: true
       }

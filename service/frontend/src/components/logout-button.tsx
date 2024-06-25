@@ -12,7 +12,7 @@ export function LogoutButton() {
 
   const mutation = useMutation({
     mutationFn: () => axios.post(
-      process.env.NEXT_PUBLIC_API + '/api/auth/logout',
+      (process.env.NEXT_PUBLIC_API ?? "") + '/api/auth/logout',
       undefined,
       {
         withCredentials: true

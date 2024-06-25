@@ -12,7 +12,7 @@ export default function Page() {
   const query = useQuery({
     queryKey: ['user'],
     queryFn: () => axios.get<GetUserResponse>(
-      process.env.NEXT_PUBLIC_API + "/api/auth/user",
+      (process.env.NEXT_PUBLIC_API ?? "") + "/api/auth/user",
       {
         withCredentials: true
       }

@@ -19,7 +19,7 @@ from enochecker3.utils import assert_equals
 from httpx import AsyncClient
 import base64
 
-from websockets.exceptions import ConnectionClosedError
+from websockets.exceptions import ConnectionClosedError, InvalidStatusCode
 
 from exploit import exploit0_apply_delta
 from noise import get_noise, get_random_noise
@@ -56,13 +56,20 @@ async def putflag0(
 ) -> str:
     (username, cookies, id) = await repl_create(client, db, logger)
     flag = base64.b64encode(bytes(task.flag, "utf-8")).decode("utf-8")
-    await repl_websocket(
-        task.address,
-        logger,
-        cookies,
-        id,
-        [sh(f'echo "{flag}" > flagstore.txt').default()],
-    )
+    try:
+        await repl_websocket(
+            task.address,
+            logger,
+            cookies,
+            id,
+            [sh(f'echo "{flag}" > flagstore.txt').default()],
+        )
+    except TimeoutError:
+        raise MumbleException("Websocket timed out")
+    except ConnectionClosedError:
+        raise MumbleException("Connection was closed")
+    except InvalidStatusCode:
+        raise MumbleException("Connection was closed")
 
     return username
 
@@ -88,6 +95,10 @@ async def getflag0(
         )
     except TimeoutError:
         raise MumbleException("Flag was not found")
+    except ConnectionClosedError:
+        raise MumbleException("Connection was closed")
+    except InvalidStatusCode:
+        raise MumbleException("Connection was closed")
 
 
 @checker.exploit(0)
@@ -113,13 +124,20 @@ async def exploit0(
     password = secrets.token_hex(30)
 
     (cookies, id) = await do_repl_auth(client, logger, delta_username, password)
-    response = await repl_websocket(
-        task.address,
-        logger,
-        cookies,
-        id,
-        [sh(f"echo FLAG && cat ../{target_username}/flagstore.txt").default()],
-    )
+    try:
+        response = await repl_websocket(
+            task.address,
+            logger,
+            cookies,
+            id,
+            [sh(f"echo FLAG && cat ../{target_username}/flagstore.txt").default()],
+        )
+    except TimeoutError:
+        raise MumbleException("Flag was not found")
+    except ConnectionClosedError:
+        raise MumbleException("Connection was closed")
+    except InvalidStatusCode:
+        raise MumbleException("Connection was closed")
 
     match = re.findall(r"FLAG\s*([A-Za-z0-9\+\=\/]+)\s*OK", response)
     if len(match) == 0:
@@ -141,13 +159,20 @@ async def putnoise0(
     assert_equals(len(sessions) > 0, True, "No session created")
 
     (i, noise) = get_random_noise()
-    await repl_websocket(
-        task.address,
-        logger,
-        cookies,
-        id,
-        noise.command_chain,
-    )
+    try:
+        await repl_websocket(
+            task.address,
+            logger,
+            cookies,
+            id,
+            noise.command_chain,
+        )
+    except TimeoutError:
+        raise MumbleException("Putnoise timed out")
+    except ConnectionClosedError:
+        raise MumbleException("Connection was closed")
+    except InvalidStatusCode:
+        raise MumbleException("Connection was closed")
 
     await db.set("noise_id", i)
 
@@ -169,13 +194,20 @@ async def getnoise0(
     if not isinstance(i, int):
         raise MumbleException("noise_id is not a int: " + str(i))
     noise = get_noise(i)
-    await repl_websocket(
-        task.address,
-        logger,
-        cookies,
-        id,
-        noise.validation_chain,
-    )
+    try:
+        await repl_websocket(
+            task.address,
+            logger,
+            cookies,
+            id,
+            noise.validation_chain,
+        )
+    except TimeoutError:
+        raise MumbleException("Noise was not found")
+    except ConnectionClosedError:
+        raise MumbleException("Connection was closed")
+    except InvalidStatusCode:
+        raise MumbleException("Connection was closed")
 
 
 @checker.havoc(0)
@@ -250,6 +282,8 @@ async def getflag1(
         raise MumbleException("Flag was not found")
     except ConnectionClosedError:
         raise MumbleException("Connection was closed")
+    except InvalidStatusCode:
+        raise MumbleException("Connection was closed")
 
 
 @checker.exploit(1)
@@ -295,7 +329,11 @@ async def exploit1(
 
         flag = base64.b64decode(match[0]).decode("utf-8")
         return flag
+    except TimeoutError:
+        raise MumbleException("Flag was not found")
     except ConnectionClosedError:
+        raise MumbleException("Connection was closed")
+    except InvalidStatusCode:
         raise MumbleException("Connection was closed")
 
 

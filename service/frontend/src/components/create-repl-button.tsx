@@ -19,7 +19,7 @@ const CreateReplButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const mutation = useMutation({
       mutationFn: (credentials: Credentials) => axios.post<{ id: string }>(
-        process.env.NEXT_PUBLIC_API + '/api/repl',
+        (process.env.NEXT_PUBLIC_API ?? "") + '/api/repl',
         credentials,
         {
           withCredentials: true

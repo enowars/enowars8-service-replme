@@ -21,7 +21,7 @@ const Editor: React.FC<EditorProps> = (props) => {
   const fileContentQuery = useQuery({
     queryKey: ['devenv', devenvUuid, 'files', filename, 'content'],
     queryFn: () => axios.get<string>(
-      process.env.NEXT_PUBLIC_API + "/api/devenv/" + devenvUuid + "/files/" + filename,
+      (process.env.NEXT_PUBLIC_API ?? "") + "/api/devenv/" + devenvUuid + "/files/" + filename,
       {
         withCredentials: true
       }
@@ -34,7 +34,7 @@ const Editor: React.FC<EditorProps> = (props) => {
 
   const fileContentMutation = useMutation({
     mutationFn: (value: string) => axios.post(
-      process.env.NEXT_PUBLIC_API + "/api/devenv/" + devenvUuid + "/files/" + filename,
+      (process.env.NEXT_PUBLIC_API ?? "") + "/api/devenv/" + devenvUuid + "/files/" + filename,
       value,
       {
         withCredentials: true
