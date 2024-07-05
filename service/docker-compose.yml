@@ -17,16 +17,19 @@ services:
       dockerfile: Dockerfile.backend
     volumes:
       - docker-cert:/cert
-      - api-key:/apikey
-      - devenvs:/devenvs
-      - devenvs-tmp:/devenvs-tmp
-      - db-data:/dbdata
+      - replme-data:/data
+      - devenvs-tmp:/devenvs
     environment:
       - DOCKER_CERT_PATH=/cert/client
       - DOCKER_TLS_VERIFY=true
       - GIN_MODE=release
       - REPL_LOG=debug
-      - REPL_SQLITE=/dbdata/replme.db
+      - REPL_IMG_TAG=ptwhy
+      - REPL_SQLITE=/data/replme.db
+      - REPL_API_KEY=/data/apikey
+      - REPL_DEVENVS=/data/devenvs
+      - REPL_DEVENVS_TMP=/devenvs
+      - REPL_CONTAINER_LOGS=/data/logs
     restart: "unless-stopped"
 
   dind:
@@ -36,8 +39,8 @@ services:
     environment:
       - DOCKER_TLS_CERTDIR=/certs
     restart: "unless-stopped"
-    logging:
-      driver: none
+    # logging:
+    #   driver: none
     ulimits:
       nproc: 79830
       nofile:
@@ -46,8 +49,8 @@ services:
     volumes:
       - docker-cert:/certs
       - docker-data:/var/lib/docker
-      - app-data:/app/data/
-      - devenvs-tmp:/devenvs-tmp
+      - docker-app-data:/app/data/
+      - devenvs-tmp:/devenvs
 
   nginx:
     container_name: replme-nginx
@@ -63,11 +66,9 @@ services:
 
 
 volumes:
+  replme-data:
+  devenvs-tmp:
   docker-cert:
   docker-data:
-  app-data:
-  api-key:
-  devenvs:
-  devenvs-tmp:
-  db-data:
+  docker-app-data:
 

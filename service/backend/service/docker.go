@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -29,14 +30,17 @@ import (
 )
 
 type DockerService struct {
-	Context  context.Context
-	Client   *client.Client
-	HostIP   string
-	ApiKey   string
-	MutexMap util.MutexMap
+	Context           context.Context
+	Client            *client.Client
+	HostIP            string
+	ImgPath           string
+	ImgTag            string
+	ApiKey            string
+	ContainerLogsPath string
+	MutexMap          util.MutexMap
 }
 
-func Docker(apiKey string) DockerService {
+func Docker(apiKey string, imgPath string, imgTag string, containerLogsPath string) DockerService {
 	ctx := context.Background()
 
 	opts := []client.Opt{
@@ -60,29 +64,38 @@ func Docker(apiKey string) DockerService {
 
 	defer cli.Close()
 
+	err = util.MakeDirIfNotExists(containerLogsPath)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	return DockerService{
-		Context:  ctx,
-		Client:   cli,
-		HostIP:   ip,
-		ApiKey:   apiKey,
-		MutexMap: *util.MutexMapNew(),
+		Context:           ctx,
+		Client:            cli,
+		HostIP:            ip,
+		ImgPath:           imgPath,
+		ImgTag:            imgTag,
+		ApiKey:            apiKey,
+		ContainerLogsPath: containerLogsPath,
+		MutexMap:          *util.MutexMapNew(),
 	}
 }
 
-func (docker *DockerService) BuildImage(imageDir string, tag string) {
+func (docker *DockerService) BuildImage() {
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
 	defer tw.Close()
 
 	ExcludePatterns := []string{}
 
-	exclude, err := os.ReadFile(path.Join(imageDir, ".dockerignore"))
+	exclude, err := os.ReadFile(path.Join(docker.ImgPath, ".dockerignore"))
 
 	if err == nil {
 		ExcludePatterns = strings.Split(string(exclude), "\n")
 	}
 
-	tar, err := archive.TarWithOptions(imageDir, &archive.TarOptions{
+	tar, err := archive.TarWithOptions(docker.ImgPath, &archive.TarOptions{
 		ExcludePatterns: ExcludePatterns,
 	})
 
@@ -92,7 +105,7 @@ func (docker *DockerService) BuildImage(imageDir string, tag string) {
 
 	opts := dockerTypes.ImageBuildOptions{
 		Dockerfile: "Dockerfile",
-		Tags:       []string{tag},
+		Tags:       []string{docker.ImgTag},
 		Remove:     true,
 		// ForceRemove: true,
 		// NoCache:     true,
@@ -200,9 +213,9 @@ func (docker *DockerService) CreateDevenvContainer(
 					Target: mountPath,
 				},
 			},
-			LogConfig: container.LogConfig{
-				Type: "none",
-			},
+			// LogConfig: container.LogConfig{
+			// 	Type: "none",
+			// },
 		},
 		nil,
 		nil,
@@ -306,6 +319,24 @@ func (docker *DockerService) KillContainerByName(name string) {
 }
 
 func (docker *DockerService) RemoveContainerById(id string) error {
+
+	out, err := docker.Client.ContainerLogs(docker.Context, id, container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     false,
+		Timestamps: false,
+	})
+
+	if err == nil {
+		logFilePath := filepath.Join(docker.ContainerLogsPath, id)
+		logFile, err := os.Create(logFilePath)
+		if err == nil {
+			io.Copy(logFile, out)
+			logFile.Close()
+		}
+		out.Close()
+	}
+
 	return docker.Client.ContainerRemove(docker.Context, id, container.RemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
@@ -363,7 +394,7 @@ func (docker *DockerService) EnsureReplContainerStarted(
 		id = container.ID
 	} else {
 		response, err := docker.CreateReplContainer(types.RunContainerOptions{
-			ImageTag:      "ptwhy",
+			ImageTag:      docker.ImgTag,
 			ContainerName: name,
 			Ports: nat.PortMap{
 				nat.Port("3000/tcp"): []nat.PortBinding{
@@ -411,7 +442,7 @@ func (docker *DockerService) EnsureDevenvContainerStarted(
 		devenvPath,
 		mountPath,
 		types.RunContainerOptions{
-			ImageTag:      "ptwhy",
+			ImageTag:      docker.ImgTag,
 			ContainerName: uuid.NewString(),
 			Ports: nat.PortMap{
 				nat.Port("3000/tcp"): []nat.PortBinding{

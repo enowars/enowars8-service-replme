@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -27,6 +28,18 @@ type DevenvController struct {
 }
 
 func NewDevenvController(docker *service.DockerService, devenvFilesPath string, devenvFilesTmpPath string) DevenvController {
+
+	err := util.MakeDirIfNotExists(devenvFilesPath)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = util.MakeDirIfNotExists(devenvFilesTmpPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	return DevenvController{
 		Docker: docker,
 		Upgrader: websocket.Upgrader{

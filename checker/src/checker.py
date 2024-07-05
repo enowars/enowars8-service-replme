@@ -69,7 +69,7 @@ async def putflag0(
     except ConnectionClosedError:
         raise MumbleException("Connection was closed")
     except InvalidStatusCode:
-        raise MumbleException("Connection was closed")
+        raise MumbleException("Invalid status code")
 
     return username
 
@@ -98,7 +98,7 @@ async def getflag0(
     except ConnectionClosedError:
         raise MumbleException("Connection was closed")
     except InvalidStatusCode:
-        raise MumbleException("Connection was closed")
+        raise MumbleException("Invalid status code")
 
 
 @checker.exploit(0)
@@ -137,7 +137,7 @@ async def exploit0(
     except ConnectionClosedError:
         raise MumbleException("Connection was closed")
     except InvalidStatusCode:
-        raise MumbleException("Connection was closed")
+        raise MumbleException("Invalid status code")
 
     match = re.findall(r"FLAG\s*([A-Za-z0-9\+\=\/]+)\s*OK", response)
     if len(match) == 0:
@@ -172,7 +172,7 @@ async def putnoise0(
     except ConnectionClosedError:
         raise MumbleException("Connection was closed")
     except InvalidStatusCode:
-        raise MumbleException("Connection was closed")
+        raise MumbleException("Invalid status code")
 
     await db.set("noise_id", i)
 
@@ -207,7 +207,7 @@ async def getnoise0(
     except ConnectionClosedError:
         raise MumbleException("Connection was closed")
     except InvalidStatusCode:
-        raise MumbleException("Connection was closed")
+        raise MumbleException("Invalid status code")
 
 
 @checker.havoc(0)
@@ -283,7 +283,7 @@ async def getflag1(
     except ConnectionClosedError:
         raise MumbleException("Connection was closed")
     except InvalidStatusCode:
-        raise MumbleException("Connection was closed")
+        raise MumbleException("Invalid Status Code")
 
 
 @checker.exploit(1)
@@ -334,7 +334,7 @@ async def exploit1(
     except ConnectionClosedError:
         raise MumbleException("Connection was closed")
     except InvalidStatusCode:
-        raise MumbleException("Connection was closed")
+        raise MumbleException("Invalid status code")
 
 
 if __name__ == "__main__":

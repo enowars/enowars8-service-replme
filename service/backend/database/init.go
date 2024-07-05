@@ -2,7 +2,6 @@ package database
 
 import (
 	"log"
-	"os"
 
 	"replme/model"
 
@@ -12,15 +11,9 @@ import (
 
 var DB *gorm.DB
 
-func Connect() {
-	sqlitePath := os.Getenv("REPL_SQLITE")
-
-	if sqlitePath == "" {
-		log.Fatal("No Sqlitepath")
-	}
-
+func Connect(dbPath string) {
 	var err error
-	DB, err = gorm.Open(sqlite.Open(sqlitePath), &gorm.Config{})
+	DB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 
 	if err != nil {
 		log.Fatal("Failed to connect to DB:", err)

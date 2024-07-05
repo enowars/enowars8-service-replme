@@ -24,7 +24,7 @@ func Cleanup(docker *DockerService, replState *ReplStateService, devenvFilesPath
 }
 
 func (cleanup *CleanupService) DoCleanup() {
-	containers, err := cleanup.Docker.GetContainers("ptwhy")
+	containers, err := cleanup.Docker.GetContainers(cleanup.Docker.ImgTag)
 
 	if err != nil {
 		return

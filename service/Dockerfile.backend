@@ -12,5 +12,5 @@ COPY ./image ./image
 
 EXPOSE 6969/tcp
 
-ENTRYPOINT ["./backend/out/main", "-i", "./image", "-k", "/apikey/key.txt", "-f", "/devenvs", "-t", "/devenvs-tmp"]
+ENTRYPOINT ["./backend/out/main", "-i", "./image"]
 
