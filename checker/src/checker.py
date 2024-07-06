@@ -10,7 +10,6 @@ from enochecker3.types import (
     ExploitCheckerTaskMessage,
     GetflagCheckerTaskMessage,
     GetnoiseCheckerTaskMessage,
-    HavocCheckerTaskMessage,
     MumbleException,
     PutflagCheckerTaskMessage,
     PutnoiseCheckerTaskMessage,
@@ -25,7 +24,6 @@ from exploit import exploit0_apply_delta
 from noise import get_noise, get_random_noise
 from util import (
     create_devenv,
-    devenv_websocket,
     do_create_devenv,
     do_get_devenv_file_content,
     do_repl_auth,
@@ -213,9 +211,7 @@ async def getnoise0(
 
 @checker.havoc(0)
 async def havoc0(
-    task: HavocCheckerTaskMessage,
     client: AsyncClient,
-    logger: LoggerAdapter,
 ):
     response = await client.get("/", follow_redirects=True)
     assert_equals(

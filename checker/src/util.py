@@ -386,7 +386,6 @@ async def repl_websocket(
 
 async def devenv_websocket(
     address: str,
-    logger: LoggerAdapter,
     cookies: Cookies,
     devenvUuid: str,
     expect: str,
