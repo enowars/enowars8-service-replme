@@ -237,12 +237,18 @@ func (devenv *DevenvController) CreateFile(ctx *gin.Context) {
 }
 
 func (devenv *DevenvController) GetFileContent(ctx *gin.Context) {
-	_devenv, _ := ctx.Get("current_devenv")
-	currentDevenv := _devenv.(model.Devenv)
-
+	_uuid, _ := ctx.Get("uuid")
+	uuid := _uuid.(string)
 	name := ctx.Param("name")
+	path := filepath.Join(devenv.DevenvFilesPath, uuid, name)
 
-	path := filepath.Join(devenv.DevenvFilesPath, currentDevenv.ID, name)
+	if !strings.HasPrefix(path, devenv.DevenvFilesPath) {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, &gin.H{
+			"error": "Invalid uuid",
+		})
+		return
+	}
+
 	content, err := util.GetFileContent(path)
 
 	if err != nil {
@@ -310,21 +316,10 @@ func (devenv *DevenvController) DeleteFile(ctx *gin.Context) {
 }
 
 func (devenv *DevenvController) Exec(ctx *gin.Context) {
-	_uuid, _ := ctx.Get("uuid")
-	uuid := _uuid.(string)
-
 	_devenv, _ := ctx.Get("current_devenv")
 	currentDevenv := _devenv.(model.Devenv)
 
-	src := filepath.Join(devenv.DevenvFilesPath, uuid)
-
-	if !strings.HasPrefix(src, devenv.DevenvFilesPath) {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, &gin.H{
-			"error": "Invalid uuid",
-		})
-		return
-	}
-
+	src := filepath.Join(devenv.DevenvFilesPath, currentDevenv.ID)
 	tmpUuid := guuid.New().String()
 
 	target := filepath.Join(devenv.DevenvFilesPathTmp, tmpUuid)

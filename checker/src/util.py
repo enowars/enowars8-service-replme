@@ -224,6 +224,26 @@ async def do_set_devenv_file_content(
     assert_equals(response.status_code < 300, True, "Setting file content failed")
 
 
+async def do_get_devenv_file_content(
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    cookies: Cookies,
+    devenvUuid: str,
+    filename: str,
+    query: str = "",
+) -> str:
+    response = await client.get(
+        "/api/devenv/" + devenvUuid + "/files/" + filename + query,
+        follow_redirects=True,
+        headers={
+            "Cookie": "session=" + (cookies.get("session") or ""),
+        },
+    )
+    logger.info(f"Server answered: {response.status_code} - {response.text}")
+    assert_equals(response.status_code < 300, True, "Setting file content failed")
+    return response.text
+
+
 async def do_repl_auth(
     client: AsyncClient, logger: LoggerAdapter, username: str, password: str
 ) -> tuple[Cookies, str]:
