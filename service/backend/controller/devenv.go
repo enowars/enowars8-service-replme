@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"replme/database"
 	"replme/model"
@@ -347,7 +348,9 @@ func (devenv *DevenvController) Exec(ctx *gin.Context) {
 		}
 	}()
 
+	start := time.Now()
 	id, _, port, err := devenv.Docker.EnsureDevenvContainerStarted(target, mount)
+	util.SLogger.Debugf("[%-25s] Starting exec container took %v", fmt.Sprintf("UID:%s..", currentDevenv.ID[:5]), time.Since(start))
 
 	if err != nil {
 		util.SLogger.Warnf("Creating devenv container failed, %s", err.Error())

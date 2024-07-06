@@ -94,5 +94,5 @@ func main() {
 	docker := service.Docker(apiKey, imagePath, imageTag, containerLogsPath)
 	docker.BuildImage()
 
-	server.Init(&docker, dbPath, devenvsPath, devenvsTmpPath)
+	server.Init(&docker, dbPath, containerLogsPath, devenvsPath, devenvsTmpPath)
 }

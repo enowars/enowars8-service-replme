@@ -16,7 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(docker *service.DockerService, dbPath string, devenvFilesPath string, devenvFilesTmpPath string) *gin.Engine {
+func NewRouter(docker *service.DockerService, dbPath string, containerLogsPath string, devenvFilesPath string, devenvFilesTmpPath string) *gin.Engine {
 
 	logLevel, exists := os.LookupEnv("REPL_LOG")
 	if !exists {
@@ -40,7 +40,7 @@ func NewRouter(docker *service.DockerService, dbPath string, devenvFilesPath str
 	devenvController := controller.NewDevenvController(docker, devenvFilesPath, devenvFilesTmpPath)
 	replController := controller.NewReplController(docker, &replState)
 
-	cleanup := service.Cleanup(docker, &replState, devenvFilesPath, devenvFilesTmpPath)
+	cleanup := service.Cleanup(docker, &replState, containerLogsPath, devenvFilesPath, devenvFilesTmpPath)
 	cleanup.DoCleanup()
 	cleanup.StartTask()
 

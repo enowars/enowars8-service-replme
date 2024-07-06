@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"replme/database"
 	"replme/model"
 	"replme/util"
@@ -10,14 +11,23 @@ import (
 type CleanupService struct {
 	Docker             *DockerService
 	ReplState          *ReplStateService
+	ContainerLogsPath  string
 	DevenvFilesPath    string
 	DevenvFilesTmpPath string
 }
 
-func Cleanup(docker *DockerService, replState *ReplStateService, devenvFilesPath string, devenvFilesTmpPath string) CleanupService {
+func Cleanup(docker *DockerService, replState *ReplStateService, containerLogsPath string, devenvFilesPath string, devenvFilesTmpPath string) CleanupService {
+
+	err := util.MakeDirIfNotExists(containerLogsPath)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	return CleanupService{
 		Docker:             docker,
 		ReplState:          replState,
+		ContainerLogsPath:  containerLogsPath,
 		DevenvFilesPath:    devenvFilesPath,
 		DevenvFilesTmpPath: devenvFilesTmpPath,
 	}
@@ -58,6 +68,11 @@ func (cleanup *CleanupService) DoCleanup() {
 	util.DeleteDirsOlderThan(cleanup.DevenvFilesPath, cutoffTime)
 	util.DeleteDirsOlderThan(cleanup.DevenvFilesTmpPath, cutoffTime)
 	util.SLogger.Debugf("Cleaning devenvs [%v]", time.Since(start))
+
+	util.SLogger.Debug("Cleaning log files starting ...")
+	start = time.Now()
+	util.DeleteFilesOlderThan(cleanup.ContainerLogsPath, cutoffTime)
+	util.SLogger.Debugf("Cleaning log files took [%v]", time.Since(start))
 
 }
 

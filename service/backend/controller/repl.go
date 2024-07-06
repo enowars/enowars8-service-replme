@@ -124,10 +124,13 @@ func (repl *ReplController) Websocket(ctx *gin.Context) {
 	}()
 
 	util.SLogger.Debugf("[%-25s] Creating REPL", fmt.Sprintf("UN:%s.. | NM:%s..", user.Username[:5], name[:5]))
-	util.SLogger.Debugf("[%-25s] Creating container", fmt.Sprintf("UN:%s.. | NM:%s..", user.Username[:5], name[:5]))
-
+	util.SLogger.Debugf("[%-25s] Starting container", fmt.Sprintf("UN:%s.. | NM:%s..", user.Username[:5], name[:5]))
+	start := time.Now()
 	lock := repl.Docker.MutexMap.Lock(name)
+	util.SLogger.Debugf("[%-25s] Locking Mutex took %v", fmt.Sprintf("UN:%s.. | NM:%s..", user.Username[:5], name[:5]), time.Since(start))
+	start = time.Now()
 	_, port, err := repl.Docker.EnsureReplContainerStarted(name)
+	util.SLogger.Debugf("[%-25s] Starting container took %v", fmt.Sprintf("UN:%s.. | NM:%s..", user.Username[:5], name[:5]), time.Since(start))
 	lock.Unlock()
 
 	if err != nil {

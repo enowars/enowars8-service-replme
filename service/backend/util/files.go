@@ -94,6 +94,36 @@ func GetFileModTime(path string) (time.Time, error) {
 	return info.ModTime(), nil
 }
 
+func DeleteFilesOlderThan(path string, t time.Time) {
+	dir, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer dir.Close()
+
+	files, err := dir.Readdir(0)
+	if err != nil {
+		return
+	}
+
+	for _, file := range files {
+		if !file.IsDir() {
+			child := filepath.Join(path, file.Name())
+			modTime, err := GetFileModTime(child)
+			if err != nil {
+				continue
+			}
+			if modTime.Before(t) {
+				SLogger.Debugf("Deleting file %s", child)
+				err = DeleteFile(child)
+				if err != nil {
+					continue
+				}
+			}
+		}
+	}
+}
+
 func DeleteDirsOlderThan(path string, t time.Time) {
 	dir, err := os.Open(path)
 	if err != nil {
