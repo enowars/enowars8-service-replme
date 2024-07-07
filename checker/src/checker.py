@@ -120,7 +120,7 @@ async def exploit0(
 
     logger.info("Delta username: " + delta_username)
 
-    password = secrets.token_hex(30)
+    password = "deafbeefdeadbeefdeadbeef"
 
     (cookies, id) = await do_repl_auth(client, logger, delta_username, password)
     try:

@@ -6,7 +6,9 @@ import secrets
 import socket
 import struct
 import time
-from typing import Any, Mapping
+import random
+import datetime
+from typing import Any, List, Mapping
 
 import aiohttp
 from aiohttp.client import ClientSession
@@ -62,40 +64,56 @@ def generate_dummyflag() -> str:
 class Round:
     round_id: int
     chain_prefix: str
-    flag: str
-    attack_info: str
+    flag0: str
+    flag1: str
+    attack_info0: str
+    attack_info1: str
 
     def __init__(self, round_id: int):
         self.round_id = round_id
         self.chain_prefix = secrets.token_hex(20)
-        self.flag = generate_dummyflag()
-        self.attack_info = ""
+        self.flag0 = generate_dummyflag()
+        self.flag1 = generate_dummyflag()
+        self.attack_info0 = ""
+        self.attack_info1 = ""
 
     @property
-    def putflag_chain_id(self) -> str:
+    def putflag0_chain_id(self) -> str:
         return f"{self.chain_prefix}_flag_s0_r{self.round_id}_t0_i0"
 
     @property
-    def getflag_chain_id(self) -> str:
+    def getflag0_chain_id(self) -> str:
         return f"{self.chain_prefix}_flag_s0_r{self.round_id}_t0_i0"
 
     @property
-    def exploit_chain_id(self) -> str:
-        return f"{self.chain_prefix}_exploit{self.round_id}_t0_i0"
+    def exploit0_chain_id(self) -> str:
+        return f"{self.chain_prefix}_exploit_s0_r{self.round_id}_t0_i0"
 
     @property
-    def putflag_payload(self) -> Mapping[str, Any]:
+    def putflag1_chain_id(self) -> str:
+        return f"{self.chain_prefix}_flag_s0_r{self.round_id}_t0_i1"
+
+    @property
+    def getflag1_chain_id(self) -> str:
+        return f"{self.chain_prefix}_flag_s0_r{self.round_id}_t0_i1"
+
+    @property
+    def exploit1_chain_id(self) -> str:
+        return f"{self.chain_prefix}_exploit_s0_r{self.round_id}_t0_i1"
+
+    @property
+    def putflag_payload0(self) -> Mapping[str, Any]:
         return {
             "address": SERVICE_ADDR,
             "attackInfo": None,
             "currentRoundId": self.round_id,
-            "flag": self.flag,
+            "flag": self.flag0,
             "flagHash": None,
             "flagRegex": None,
             "method": "putflag",
             "relatedRoundId": self.round_id,
             "roundLength": 60000,
-            "taskChainId": self.putflag_chain_id,
+            "taskChainId": self.putflag0_chain_id,
             "taskId": self.round_id,
             "teamId": 0,
             "teamName": "teamname",
@@ -104,18 +122,18 @@ class Round:
         }
 
     @property
-    def getflag_payload(self) -> Mapping[str, Any]:
+    def getflag_payload0(self) -> Mapping[str, Any]:
         return {
             "address": SERVICE_ADDR,
             "attackInfo": None,
             "currentRoundId": self.round_id,
-            "flag": self.flag,
+            "flag": self.flag0,
             "flagHash": None,
             "flagRegex": None,
             "method": "getflag",
             "relatedRoundId": self.round_id,
             "roundLength": 60000,
-            "taskChainId": self.getflag_chain_id,
+            "taskChainId": self.getflag0_chain_id,
             "taskId": self.round_id,
             "teamId": 0,
             "teamName": "teamname",
@@ -124,18 +142,18 @@ class Round:
         }
 
     @property
-    def exploit_payload(self) -> Mapping[str, Any]:
+    def exploit_payload0(self) -> Mapping[str, Any]:
         return {
             "address": SERVICE_ADDR,
-            "attackInfo": self.attack_info,
+            "attackInfo": self.attack_info0,
             "currentRoundId": self.round_id,
             "flag": None,
-            "flagHash": hashlib.sha256(self.flag.encode()).hexdigest(),
+            "flagHash": hashlib.sha256(self.flag0.encode()).hexdigest(),
             "flagRegex": "ENO[A-Za-z0-9+\\/=]{48}",
             "method": "exploit",
             "relatedRoundId": self.round_id,
             "roundLength": 60000,
-            "taskChainId": self.exploit_chain_id,
+            "taskChainId": self.exploit0_chain_id,
             "taskId": self.round_id,
             "teamId": 0,
             "teamName": "teamname",
@@ -143,66 +161,237 @@ class Round:
             "variantId": 0,
         }
 
+    @property
+    def putflag_payload1(self) -> Mapping[str, Any]:
+        return {
+            "address": SERVICE_ADDR,
+            "attackInfo": None,
+            "currentRoundId": self.round_id,
+            "flag": self.flag0,
+            "flagHash": None,
+            "flagRegex": None,
+            "method": "putflag",
+            "relatedRoundId": self.round_id,
+            "roundLength": 60000,
+            "taskChainId": self.putflag1_chain_id,
+            "taskId": self.round_id,
+            "teamId": 0,
+            "teamName": "teamname",
+            "timeout": 10000,
+            "variantId": 1,
+        }
 
-async def putflag(client: ClientSession, round: Round):
+    @property
+    def getflag_payload1(self) -> Mapping[str, Any]:
+        return {
+            "address": SERVICE_ADDR,
+            "attackInfo": None,
+            "currentRoundId": self.round_id,
+            "flag": self.flag0,
+            "flagHash": None,
+            "flagRegex": None,
+            "method": "getflag",
+            "relatedRoundId": self.round_id,
+            "roundLength": 60000,
+            "taskChainId": self.getflag1_chain_id,
+            "taskId": self.round_id,
+            "teamId": 0,
+            "teamName": "teamname",
+            "timeout": 10000,
+            "variantId": 1,
+        }
+
+    @property
+    def exploit_payload1(self) -> Mapping[str, Any]:
+        return {
+            "address": SERVICE_ADDR,
+            "attackInfo": self.attack_info1,
+            "currentRoundId": self.round_id,
+            "flag": None,
+            "flagHash": hashlib.sha256(self.flag0.encode()).hexdigest(),
+            "flagRegex": "ENO[A-Za-z0-9+\\/=]{48}",
+            "method": "exploit",
+            "relatedRoundId": self.round_id,
+            "roundLength": 60000,
+            "taskChainId": self.exploit1_chain_id,
+            "taskId": self.round_id,
+            "teamId": 0,
+            "teamName": "teamname",
+            "timeout": 10000,
+            "variantId": 1,
+        }
+
+
+errs = []
+
+
+async def putflag0(client: ClientSession, round: Round):
+    global errs
     start = time.monotonic()
     async with client.post(
         CHECKER_ADDR,
-        json=round.putflag_payload,
+        json=round.putflag_payload0,
     ) as response:
         if response.status == 200:
             payload = await response.json()
-            print(
-                f"PUTFLAG {round.round_id}: ({str(time.monotonic() - start)[:5]}) {payload['result']} - {payload['message']}"
-            )
-            round.attack_info = payload["attackInfo"]
+            s = f"{datetime.datetime.now()} PUTFLAG {round.round_id}:0: ({str(time.monotonic() - start)[:5]}) {payload['result']} - {payload['message']}"
+            print(s)
+            if payload["result"] != "OK":
+                errs.append(s)
+            round.attack_info0 = payload["attackInfo"]
         else:
-            print(
-                f"PUTFLAG {round.round_id}: ({str(time.monotonic() - start)[:5]}) {response.status}"
-            )
+            s = f"{datetime.datetime.now()} PUTFLAG {round.round_id}:0: ({str(time.monotonic() - start)[:5]}) {response.status}"
+            print(s)
+            errs.append(s)
 
 
-async def getflag(client: ClientSession, round: Round):
+async def getflag0(client: ClientSession, round: Round):
+    global errs
     start = time.monotonic()
     async with client.post(
         CHECKER_ADDR,
-        json=round.getflag_payload,
+        json=round.getflag_payload0,
     ) as response:
         if response.status == 200:
             payload = await response.json()
-            print(
-                f"GETFLAG {round.round_id}: ({str(time.monotonic() - start)[:5]}) {payload['result']} - {payload['message']}"
-            )
+            s = f"{datetime.datetime.now()} GETFLAG {round.round_id}:0: ({str(time.monotonic() - start)[:5]}) {payload['result']} - {payload['message']}"
+            print(s)
+            if payload["result"] != "OK":
+                errs.append(s)
         else:
-            print(
-                f"GETFLAG {round.round_id}: ({str(time.monotonic() - start)[:5]}) {response.status}"
-            )
+            s = f"{datetime.datetime.now()} GETFLAG {round.round_id}:0: ({str(time.monotonic() - start)[:5]}) {response.status}"
+            print(s)
+            errs.append(s)
 
 
-async def exploit(client: ClientSession, round: Round):
+async def exploit0(client: ClientSession, round: Round):
+    global errs
     start = time.monotonic()
     async with client.post(
         CHECKER_ADDR,
-        json=round.exploit_payload,
+        json=round.exploit_payload0,
     ) as response:
         if response.status == 200:
             payload = await response.json()
-            print(
-                f"EXPLOIT {round.round_id}: ({str(time.monotonic() - start)[:5]}) {payload['result']} - {payload['message']}"
-            )
+            s = f"{datetime.datetime.now()} EXPLOIT {round.round_id}:0: ({str(time.monotonic() - start)[:5]}) {payload['result']} - {payload['message']}"
+            print(s)
+            if payload["result"] != "OK":
+                errs.append(s)
         else:
-            print(
-                f"EXPLOIT {round.round_id}: ({str(time.monotonic() - start)[:5]}) {response.status}"
-            )
+            s = f"{datetime.datetime.now()} EXPLOIT {round.round_id}:0: ({str(time.monotonic() - start)[:5]}) {response.status}"
+            print(s)
+            errs.append(s)
+
+
+async def putflag1(client: ClientSession, round: Round):
+    global errs
+    start = time.monotonic()
+    async with client.post(
+        CHECKER_ADDR,
+        json=round.putflag_payload1,
+    ) as response:
+        if response.status == 200:
+            payload = await response.json()
+            s = f"{datetime.datetime.now()} PUTFLAG {round.round_id}:1: ({str(time.monotonic() - start)[:5]}) {payload['result']} - {payload['message']}"
+            print(s)
+            if payload["result"] != "OK":
+                errs.append(s)
+            round.attack_info1 = payload["attackInfo"]
+        else:
+            s = f"{datetime.datetime.now()} PUTFLAG {round.round_id}:1: ({str(time.monotonic() - start)[:5]}) {response.status}"
+            print(s)
+            errs.append(s)
+
+
+async def getflag1(client: ClientSession, round: Round):
+    global errs
+    start = time.monotonic()
+    async with client.post(
+        CHECKER_ADDR,
+        json=round.getflag_payload1,
+    ) as response:
+        if response.status == 200:
+            payload = await response.json()
+            s = f"{datetime.datetime.now()} GETFLAG {round.round_id}:1: ({str(time.monotonic() - start)[:5]}) {payload['result']} - {payload['message']}"
+            print(s)
+            if payload["result"] != "OK":
+                errs.append(s)
+        else:
+            s = f"{datetime.datetime.now()} GETFLAG {round.round_id}:1: ({str(time.monotonic() - start)[:5]}) {response.status}"
+            print(s)
+            errs.append(s)
+
+
+async def exploit1(client: ClientSession, round: Round):
+    global errs
+    start = time.monotonic()
+    async with client.post(
+        CHECKER_ADDR,
+        json=round.exploit_payload1,
+    ) as response:
+        if response.status == 200:
+            payload = await response.json()
+            s = f"{datetime.datetime.now()} EXPLOIT {round.round_id}:1: ({str(time.monotonic() - start)[:5]}) {payload['result']} - {payload['message']}"
+            print(s)
+            if payload["result"] != "OK":
+                errs.append(s)
+        else:
+            s = f"{datetime.datetime.now()} EXPLOIT {round.round_id}:1: ({str(time.monotonic() - start)[:5]}) {response.status}"
+            print(s)
+            errs.append(s)
+
+
+async def exploit0_delayed(client: ClientSession, round: Round):
+    delay = random.randint(0, 5500) / 100
+    await asyncio.sleep(delay)
+    await exploit0(client, round)
+
+
+async def exploit1_delayed(client: ClientSession, round: Round):
+    delay = random.randint(0, 5500) / 100
+    await asyncio.sleep(delay)
+    await exploit1(client, round)
+
+
+async def exec_round(client: ClientSession, round: Round, with_putflag: bool = False):
+    if with_putflag:
+        await putflag0(client, round)
+        await putflag1(client, round)
+    getflag0_future = getflag0(client, round)
+    getflag1_future = getflag1(client, round)
+    futures0 = [exploit0_delayed(client, round) for _ in range(20)]
+    futures1 = [exploit1_delayed(client, round) for _ in range(40)]
+    await asyncio.gather(getflag0_future, getflag1_future, *futures0, *futures1)
 
 
 async def main():
+    global errs
+    currentRound = 0
+    rounds: List[Round] = []
+
     async with aiohttp.ClientSession() as client:
-        round = Round(0)
-        await putflag(client, round)
-        await getflag(client, round)
-        futures = [exploit(client, round) for _ in range(100)]
-        await asyncio.gather(*futures)
+        for i in range(10):
+            round = Round(currentRound)
+            await putflag0(client, round)
+            await putflag1(client, round)
+            rounds.append(round)
+            currentRound += 1
+
+        for i in range(10):
+            print("TICK", i)
+            start = time.monotonic()
+            round = Round(currentRound)
+            current_round_future = exec_round(client, round, True)
+            prev_rounds_futures = [
+                exec_round(client, prevRound) for prevRound in rounds[-10:]
+            ]
+            rounds.append(round)
+            await asyncio.gather(current_round_future, *prev_rounds_futures)
+            print(f"TICK {i} END ({str(time.monotonic() - start)[:5]})")
+            currentRound += 1
+    print("============ Result ============")
+    for err in errs:
+        print(err)
 
 
 asyncio.run(main())

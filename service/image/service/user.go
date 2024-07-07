@@ -225,8 +225,10 @@ func (user *UserService) Register(username string, password string) (*types.Resp
 		}, nil
 	} else {
 		user.Mutex.Lock()
+		defer func() {
+			user.Mutex.Unlock()
+		}()
 		err := createUser(username, password)
-		user.Mutex.Unlock()
 		if err != nil {
 			return nil, err
 		}

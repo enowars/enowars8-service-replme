@@ -108,6 +108,7 @@ func (repl *ReplController) Websocket(ctx *gin.Context) {
 	repl.ReplState.AddContainerSession(name)
 
 	defer func() {
+		time.Sleep(5 * time.Second)
 		var lock util.Unlocker
 		util.SLogger.Debugf("Deleting container session")
 		kill := repl.ReplState.DeleteContainerSession(name, func(name string) {
