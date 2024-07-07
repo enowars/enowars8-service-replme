@@ -176,9 +176,9 @@ func (docker *DockerService) CreateReplContainer(
 					Target: "/home",
 				},
 			},
-			LogConfig: container.LogConfig{
-				Type: "none",
-			},
+			// LogConfig: container.LogConfig{
+			// 	Type: "none",
+			// },
 		},
 		nil,
 		nil,
@@ -313,6 +313,29 @@ func (docker *DockerService) KillContainerById(id string) error {
 
 func (docker *DockerService) KillContainerByName(name string) {
 	c, _, running := docker.GetContainer(name)
+
+	out, err := docker.Client.ContainerLogs(docker.Context, c.ID, container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     false,
+		Timestamps: false,
+	})
+
+	if err == nil {
+		t := time.Now()
+
+		timestamp := fmt.Sprintf("%04d%02d%02d_%02d%02d%02d",
+			t.Year(), t.Month(), t.Day(),
+			t.Hour(), t.Minute(), t.Second())
+		logFilePath := filepath.Join(docker.ContainerLogsPath, fmt.Sprintf("%s_%s", timestamp, c.ID))
+		logFile, err := os.Create(logFilePath)
+		if err == nil {
+			io.Copy(logFile, out)
+			logFile.Close()
+		}
+		out.Close()
+	}
+
 	if running {
 		docker.Client.ContainerKill(docker.Context, c.ID, "SIGKILL")
 	}

@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 
 	"image-go/types"
 )
@@ -145,13 +146,18 @@ func validateUserPassword(shadow UserShadowData, password string) *types.Respons
 }
 
 func createUser(username string, password string) *types.ResponseError {
-	err := exec.Command(
+	cmd := exec.Command(
 		"adduser",
 		"-D",
 		username,
 		"-s",
 		"/bin/zsh",
-	).Run()
+	)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
 
 	if err != nil {
 		return &types.ResponseError{
@@ -160,11 +166,16 @@ func createUser(username string, password string) *types.ResponseError {
 		}
 	}
 
-	err = exec.Command(
+	cmd = exec.Command(
 		"sh",
 		"-c",
 		fmt.Sprintf("echo %s:%s | chpasswd", username, password),
-	).Run()
+	)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err = cmd.Run()
 
 	if err != nil {
 		return &types.ResponseError{
@@ -176,7 +187,9 @@ func createUser(username string, password string) *types.ResponseError {
 	return nil
 }
 
-type UserService struct{}
+type UserService struct {
+	Mutex sync.RWMutex
+}
 
 func NewUserService() UserService {
 	return UserService{}
@@ -211,7 +224,9 @@ func (user *UserService) Register(username string, password string) (*types.Resp
 			Message: "Ok",
 		}, nil
 	} else {
+		user.Mutex.Lock()
 		err := createUser(username, password)
+		user.Mutex.Unlock()
 		if err != nil {
 			return nil, err
 		}

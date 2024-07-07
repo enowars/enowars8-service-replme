@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"regexp"
 
@@ -72,6 +73,7 @@ func (user *UserController) Register(ctx *gin.Context) {
 	result, err := user.Service.Register(credentials.Username, credentials.Password)
 
 	if err != nil {
+		fmt.Printf("register failed: %s\n", err.Error())
 		ctx.JSON(err.Code, gin.H{"error": err.Message})
 		return
 	}
