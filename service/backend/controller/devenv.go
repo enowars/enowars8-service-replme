@@ -125,7 +125,7 @@ func (devenv *DevenvController) Create(ctx *gin.Context) {
 	}
 
 	dir := filepath.Join(devenv.DevenvFilesPath, currentDevenv.ID)
-	err = util.SetFileContent(dir, "main.c", "")
+	err = util.SetFileContent(dir, "main.c", "#include<stdio.h>\n\nint main() {\n  printf(\"Hello, REPL!\\n\");\n  return 0;\n}\n")
 
 	ctx.JSON(http.StatusOK, types.CreateDevenvResponse{
 		DevenvUuid: currentDevenv.ID,
