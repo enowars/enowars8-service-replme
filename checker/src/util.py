@@ -184,7 +184,7 @@ async def do_create_devenv(
 
     json = response.json()
     devenvUuid = json["devenvUuid"]
-    assert_equals(id is not None, True, "Did not receive a devenvUuid")
+    assert_equals(devenvUuid is not None, True, "Did not receive a devenvUuid")
     logger.info(f"DevenvUuid: {devenvUuid}")
 
     return devenvUuid
@@ -240,7 +240,7 @@ async def do_get_devenv_file_content(
         },
     )
     logger.info(f"Server answered: {response.status_code} - {response.text}")
-    assert_equals(response.status_code < 300, True, "Setting file content failed")
+    assert_equals(response.status_code < 300, True, "Getting file content failed")
     return response.text
 
 
