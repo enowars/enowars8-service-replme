@@ -152,6 +152,8 @@ func (docker *DockerService) CreateReplContainer(
 		return nil, err
 	}
 
+	pidsLimit := int64(256)
+
 	util.SLogger.Debugf("[%-25s] Creating volume \"home\"", fmt.Sprintf("NM:%s..", opts.ContainerName[:5]))
 	container, err := docker.Client.ContainerCreate(
 		docker.Context,
@@ -176,6 +178,10 @@ func (docker *DockerService) CreateReplContainer(
 					Target: "/home",
 				},
 			},
+			Resources: container.Resources{
+				CPUQuota:  20000,
+				PidsLimit: &pidsLimit,
+			},
 			// LogConfig: container.LogConfig{
 			// 	Type: "none",
 			// },
@@ -195,6 +201,8 @@ func (docker *DockerService) CreateDevenvContainer(
 ) (*container.CreateResponse, error) {
 	util.SLogger.Debugf("[%-25s] Creating container", fmt.Sprintf("NM:%s..", opts.ContainerName[:5]))
 
+	pidsLimit := int64(256)
+
 	container, err := docker.Client.ContainerCreate(
 		docker.Context,
 		&container.Config{
@@ -212,6 +220,10 @@ func (docker *DockerService) CreateDevenvContainer(
 					Source: devenvPath,
 					Target: mountPath,
 				},
+			},
+			Resources: container.Resources{
+				CPUQuota:  20000,
+				PidsLimit: &pidsLimit,
 			},
 			// LogConfig: container.LogConfig{
 			// 	Type: "none",

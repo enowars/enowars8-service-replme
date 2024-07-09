@@ -28,10 +28,11 @@ def get_ip_address(ifname):
 CHECKER_ADDR = "http://127.0.0.1:16969"
 SERVICE_ADDR = get_ip_address("wlp3s0")
 
+VARIANTS = [0]
 TICKS = 3
-MULTIPLIER = 4
+MULTIPLIER = 1
 EXPLOITS_AMOUNT = 20
-EXPLOIT_PAST_ROUNDS = 3
+EXPLOIT_PAST_ROUNDS = 10
 
 
 async def run_before(delay: int, coro):
@@ -210,7 +211,6 @@ class Round:
 async def main():
     curr_round = 0
     rounds: List[Round] = []
-    variants = [0, 1]
 
     tasks: List[asyncio.Task] = []
 
@@ -219,7 +219,7 @@ async def main():
             round = Round(
                 client,
                 curr_round,
-                variants,
+                VARIANTS,
                 multiplier=MULTIPLIER,
                 exploits_amount=EXPLOITS_AMOUNT,
             )
@@ -233,7 +233,7 @@ async def main():
             round = Round(
                 client,
                 curr_round,
-                variants,
+                VARIANTS,
                 multiplier=MULTIPLIER,
                 exploits_amount=EXPLOITS_AMOUNT,
             )

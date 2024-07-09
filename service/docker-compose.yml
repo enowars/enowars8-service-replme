@@ -32,17 +32,9 @@ services:
       - REPL_CONTAINER_LOGS=/data/logs
     restart: "unless-stopped"
 
-  fix-certs-perms:
-    image: alpine:latest
-    command: chown 1000:1000 -R /certs
-    volumes:
-      - docker-cert:/certs
-
   dind:
-    image: docker:dind-rootless
+    image: docker:dind
     container_name: replme-dind
-    depends_on:
-      - fix-certs-perms
     privileged: true
     environment:
       - DOCKER_TLS_CERTDIR=/certs
