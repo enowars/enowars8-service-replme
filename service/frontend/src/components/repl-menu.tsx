@@ -12,9 +12,9 @@ import {
 } from "@/components/ui/drawer"
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { CodeIcon } from "@radix-ui/react-icons";
 import CreateReplButton from "./create-repl-button";
 import { navigate } from "@/actions/navigate";
+import { PiTerminalWindowLight } from "react-icons/pi";
 
 const ReplMenu = () => {
   const query = useQuery(
@@ -26,11 +26,13 @@ const ReplMenu = () => {
 
   const numSessions = query.data?.data?.length ?? 0;
 
+  // <CodeIcon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all" />
+
   return (
     <Drawer>
       <DrawerTrigger asChild>
         <Button className="relative" variant="outline" size="icon">
-          <CodeIcon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all" />
+          <PiTerminalWindowLight className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all" />
           {Boolean(numSessions) && <div className="absolute w-5 h-5 bg-red-400 -top-2 -right-2 rounded-full text-white">{numSessions}</div>}
         </Button>
       </DrawerTrigger>

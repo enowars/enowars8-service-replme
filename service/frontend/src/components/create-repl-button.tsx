@@ -5,8 +5,9 @@ import { randomString } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Button, ButtonProps } from "./ui/button";
-import { CodeIcon, ReloadIcon } from "@radix-ui/react-icons";
+import { ReloadIcon } from "@radix-ui/react-icons";
 import React from "react";
+import { PiTerminalWindowLight } from "react-icons/pi";
 
 type Credentials = {
   username: string,
@@ -41,7 +42,7 @@ const CreateReplButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <Button ref={ref} {...props} disabled={mutation.isPending} onClick={handleCreateRepl}>
         {mutation.isPending ? <ReloadIcon className="mr-2 h-4 w-4 animate-spin" /> :
-          <CodeIcon className="mr-2 h-4 w-4" />} REPLME!
+          <PiTerminalWindowLight className="mr-2 h-4 w-4" />} REPLME!
       </Button>
     )
   }
