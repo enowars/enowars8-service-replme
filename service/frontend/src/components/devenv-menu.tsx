@@ -10,22 +10,14 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer"
-import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 import { CodeIcon } from "@radix-ui/react-icons";
 import { navigate } from "@/actions/navigate";
-import { Devenv } from "@/lib/types";
 import CreateDevenvButton from "./create-devenv-button";
+import { useDevenvsQuery } from "@/hooks/use-devenvs-query";
 
 const DevenvMenu = () => {
-  const query = useQuery(
-    {
-      queryKey: ["devenvs"],
-      queryFn: () => axios.get<Devenv[]>((process.env.NEXT_PUBLIC_API ?? "") + '/api/devenv', { withCredentials: true }),
-    }
-  )
-
-  const numSessions = query.data?.data?.length ?? 0;
+  const devenvsQuery = useDevenvsQuery();
+  const numSessions = devenvsQuery.data?.data?.length ?? 0;
 
   return (
     <Drawer>
@@ -43,7 +35,7 @@ const DevenvMenu = () => {
           </DrawerHeader>
 
           <div className="flex flex-row justify-center items-center w-full space-x-5 overflow-auto">
-            {query.data?.data?.map((devenv) => (
+            {devenvsQuery.data?.data?.map((devenv) => (
               <DrawerClose asChild key={devenv.id}>
                 <Button variant="outline" onClick={() => navigate("/devenv/" + devenv.id)}>
                   {devenv.name}

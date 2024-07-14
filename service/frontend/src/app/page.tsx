@@ -3,25 +3,12 @@
 import CreateDevenvButton from "@/components/create-devenv-button";
 import CreateReplButton from "@/components/create-repl-button";
 import { Button } from "@/components/ui/button";
-import { GetUserResponse } from "@/lib/types";
+import { useUserQuery } from "@/hooks/use-user-query";
 import { RocketIcon } from "@radix-ui/react-icons"
-import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 
 export default function Page() {
-  const query = useQuery({
-    queryKey: ['user'],
-    queryFn: () => axios.get<GetUserResponse>(
-      (process.env.NEXT_PUBLIC_API ?? "") + "/api/auth/user",
-      {
-        withCredentials: true
-      }
-    ),
-    staleTime: Infinity,
-  })
-
-
-  const isAuthenticatedMode = !query.isStale && query.isSuccess
+  const userQuery = useUserQuery()
+  const isAuthenticatedMode = !userQuery.isStale && userQuery.isSuccess
 
   return (
     <main className="flex h-screen w-screen flex-col items-center p-24 justify-center space-y-5">

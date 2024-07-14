@@ -2,13 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { navigate } from "@/actions/navigate";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useMutation } from "@tanstack/react-query";
+import { useRegisterMutation } from "@/hooks/use-register-mutation";
 
 const RegisterFormSchema = z.object({
   username: z.string().min(4, { message: "Minimum length 4" }).max(64, { message: "Maximum length 4" }).regex(/^[a-zA-Z0-9]*$/, { message: "Only alphanumeric" }),
@@ -27,17 +25,7 @@ export default function Page() {
     }
   })
 
-  const mutation = useMutation({
-    mutationFn: (credentials: RegisterForm) => axios.post(
-      (process.env.NEXT_PUBLIC_API ?? "") + '/api/auth/register',
-      credentials,
-      {
-        withCredentials: true
-      }
-    ),
-    onSuccess: () => {
-      navigate("/login")
-    },
+  const mutation = useRegisterMutation({
     onError: () => {
       form.setError("username", {
         message: "That did not work, user exists?"

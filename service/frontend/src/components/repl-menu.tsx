@@ -10,23 +10,14 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer"
-import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 import CreateReplButton from "./create-repl-button";
 import { navigate } from "@/actions/navigate";
 import { PiTerminalWindowLight } from "react-icons/pi";
+import { useReplSessionsQuery } from "@/hooks/use-repl-sessions-query";
 
 const ReplMenu = () => {
-  const query = useQuery(
-    {
-      queryKey: ["repl-sessions"],
-      queryFn: () => axios.get<string[]>((process.env.NEXT_PUBLIC_API ?? "") + '/api/repl/sessions', { withCredentials: true }),
-    }
-  )
-
-  const numSessions = query.data?.data?.length ?? 0;
-
-  // <CodeIcon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all" />
+  const replSessionsQuery = useReplSessionsQuery()
+  const numSessions = replSessionsQuery.data?.data?.length ?? 0;
 
   return (
     <Drawer>
@@ -44,7 +35,7 @@ const ReplMenu = () => {
           </DrawerHeader>
 
           <div className="flex flex-row justify-center items-center w-full space-x-5 overflow-auto">
-            {query.data?.data?.map((id) => (
+            {replSessionsQuery.data?.data?.map((id) => (
               <DrawerClose asChild key={id}>
                 <Button variant="outline" onClick={() => navigate("/repl/" + id)}>
                   {id.substring(0, 5)}

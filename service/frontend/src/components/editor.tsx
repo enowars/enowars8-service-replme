@@ -1,8 +1,8 @@
 "use client";
 
+import { useDevenvFileContentQuery } from '@/hooks/use-devenv-file-content-query';
+import { useDevenvFileContentMutation } from '@/hooks/use-devenv-file-content-mutation';
 import MonacoEditor, { Monaco, OnChange } from '@monaco-editor/react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import { useTheme } from 'next-themes';
 
 type EditorProps = {
@@ -13,41 +13,18 @@ type EditorProps = {
 
 const Editor: React.FC<EditorProps> = (props) => {
   const { className, devenvUuid, filename } = props;
-  const queryClient = useQueryClient();
 
   const { resolvedTheme } = useTheme();
   const editorTheme = resolvedTheme === "light" ? "light" : "dark";
 
-  const fileContentQuery = useQuery({
-    queryKey: ['devenv', devenvUuid, 'files', filename, 'content'],
-    queryFn: () => axios.get<string>(
-      (process.env.NEXT_PUBLIC_API ?? "") + "/api/devenv/" + devenvUuid + "/files/" + filename,
-      {
-        withCredentials: true
-      }
-    ).then((data) => {
-      return data.data
-    }),
-    staleTime: Infinity,
-    enabled: Boolean(filename)
+  const fileContentQuery = useDevenvFileContentQuery({
+    uuid: devenvUuid,
+    filename
   })
 
-  const fileContentMutation = useMutation({
-    mutationFn: (value: string) => axios.post(
-      (process.env.NEXT_PUBLIC_API ?? "") + "/api/devenv/" + devenvUuid + "/files/" + filename,
-      value,
-      {
-        withCredentials: true
-      }
-    ),
-    onSuccess: (_, value) => {
-      queryClient.setQueryData<string>(
-        ['devenv', devenvUuid, 'files', filename, 'content'],
-        () => {
-          return value
-        }
-      )
-    },
+  const fileContentMutation = useDevenvFileContentMutation({
+    uuid: devenvUuid,
+    filename
   })
 
   const handleEditorWillMount = (monaco: Monaco) => {

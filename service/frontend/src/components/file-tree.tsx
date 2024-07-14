@@ -1,5 +1,3 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import axios from "axios"
 import { Button } from "./ui/button"
 import { Skeleton } from "./ui/skeleton"
 import { Cross2Icon } from "@radix-ui/react-icons"
@@ -8,6 +6,9 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Form, FormControl, FormField, FormItem } from "./ui/form"
 import { Input } from "./ui/input"
+import { useDevenvFilesQuery } from "@/hooks/use-devenv-files-query"
+import { useDevenvCreateFileMutation } from "@/hooks/use-devenv-create-file-mutation"
+import { useDevenvDeleteFileMutation } from "@/hooks/use-devenv-delete-file-mutation"
 
 type FileTreeProps = {
   className?: string
@@ -25,8 +26,6 @@ type CreateFileForm = z.infer<typeof CreateFileFormSchema>;
 const FileTree: React.FC<FileTreeProps> = (props) => {
   const { className, devenvUuid, selectedFile, setSelectedFile } = props;
 
-  const queryClient = useQueryClient();
-
   const form = useForm<CreateFileForm>({
     resolver: zodResolver(CreateFileFormSchema),
     defaultValues: {
@@ -34,64 +33,29 @@ const FileTree: React.FC<FileTreeProps> = (props) => {
     }
   })
 
-  const filesQuery = useQuery({
-    queryKey: ['devenv', devenvUuid, 'files'],
-    queryFn: () => axios.get<string[]>(
-      (process.env.NEXT_PUBLIC_API ?? "") + "/api/devenv/" + devenvUuid + "/files",
-      {
-        withCredentials: true
-      }
-    ).then((data) => {
-      const files = data.data.sort();
+  const filesQuery = useDevenvFilesQuery({
+    uuid: devenvUuid,
+    callback: (files) => {
       if (!selectedFile && files.length > 0)
         setSelectedFile(files[0])
-      return files
-    }),
-  })
-
-  const createFileMutation = useMutation({
-    mutationFn: (file: CreateFileForm) => axios.post(
-      (process.env.NEXT_PUBLIC_API ?? "") + '/api/devenv/' + devenvUuid + "/files",
-      file,
-      {
-        withCredentials: true
-      }
-    ),
-    onSuccess: (_, file) => {
-      queryClient.setQueryData<string[]>(
-        ['devenv', devenvUuid, 'files'],
-        (oldData) => {
-          let _data: string[] = oldData ?? []
-          if (_data.includes(file.name))
-            return _data
-          if (!selectedFile)
-            setSelectedFile(file.name)
-          return [..._data, file.name].sort()
-        }
-      )
-    },
-  })
-
-  const deleteFileMutation = useMutation({
-    mutationFn: (filename: string) => axios.delete(
-      (process.env.NEXT_PUBLIC_API ?? "") + '/api/devenv/' + devenvUuid + "/files/" + encodeURI(filename),
-      {
-        withCredentials: true
-      }
-    ),
-    onSuccess: (_, filename) => {
-      queryClient.setQueryData<string[]>(
-        ['devenv', devenvUuid, 'files'],
-        (oldData) => {
-          let _data: string[] = oldData ?? []
-          _data = _data.filter((name) => name !== filename)
-          if (selectedFile === filename)
-            setSelectedFile(_data.length > 0 ? _data[0] : undefined)
-          return _data
-        }
-      )
     }
   })
+
+  const createFileMutation = useDevenvCreateFileMutation({
+    uuid: devenvUuid,
+    onSuccess: (file) => {
+      if (!selectedFile)
+        setSelectedFile(file.name)
+    }
+  })
+
+  const deleteFileMutation = useDevenvDeleteFileMutation({
+    uuid: devenvUuid,
+    onSuccess: (filename, files) => {
+      if (selectedFile === filename)
+        setSelectedFile(files.length > 0 ? files[0] : undefined)
+    }
+  });
 
   const onCreateFileSubmit = (file: CreateFileForm) => {
     createFileMutation.mutate(file)

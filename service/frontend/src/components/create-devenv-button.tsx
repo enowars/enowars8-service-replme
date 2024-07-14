@@ -1,35 +1,18 @@
 "use client";
 
-import { navigate } from "@/actions/navigate";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import { Button, ButtonProps } from "./ui/button";
 import { CodeIcon, ReloadIcon } from "@radix-ui/react-icons";
 import React from "react";
-import { CreateDevenvRequest, CreateDevenvResponse } from "@/lib/types";
 import { randomString } from "@/lib/utils";
+import { useCreateDevenvMutation } from "@/hooks/use-create-devenv-mutation";
 
 const CreateDevenvButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (props, ref) => {
-    const client = useQueryClient();
+    const createDevenvMutation = useCreateDevenvMutation();
 
-    const mutation = useMutation({
-      mutationFn: (credentials: CreateDevenvRequest) => axios.post<CreateDevenvResponse>(
-        (process.env.NEXT_PUBLIC_API ?? "") + '/api/devenv',
-        credentials,
-        {
-          withCredentials: true
-        }
-      ),
-      onSuccess: (response) => {
-        client.invalidateQueries({ queryKey: ['devenvs'] })
-        navigate("/devenv/" + response.data.devenvUuid)
-      },
-    })
-
-    const handleCreateRepl = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+    const handleCreateDevenv = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
       const name = randomString(10);
-      mutation.mutate({
+      createDevenvMutation.mutate({
         name,
         buildCmd: "gcc -o main main.c",
         runCmd: "./main"
@@ -38,8 +21,8 @@ const CreateDevenvButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
     }
 
     return (
-      <Button ref={ref} {...props} disabled={mutation.isPending} onClick={handleCreateRepl}>
-        {mutation.isPending ? <ReloadIcon className="mr-2 h-4 w-4 animate-spin" /> :
+      <Button ref={ref} {...props} disabled={createDevenvMutation.isPending} onClick={handleCreateDevenv}>
+        {createDevenvMutation.isPending ? <ReloadIcon className="mr-2 h-4 w-4 animate-spin" /> :
           <CodeIcon className="mr-2 h-4 w-4" />} DEVENVME!
       </Button>
     )
@@ -49,3 +32,4 @@ const CreateDevenvButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
 CreateDevenvButton.displayName = "CreateDevenvButton";
 
 export default CreateDevenvButton;
+

@@ -2,13 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { navigate } from "@/actions/navigate";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLoginMutation } from "@/hooks/use-login-mutation";
 
 const LoginFormSchema = z.object({
   username: z.string().min(1, { message: "Username can't be empty" }),
@@ -18,8 +16,6 @@ const LoginFormSchema = z.object({
 type LoginForm = z.infer<typeof LoginFormSchema>;
 
 export default function Page() {
-  const queryClient = useQueryClient();
-
   const form = useForm<LoginForm>({
     resolver: zodResolver(LoginFormSchema),
     defaultValues: {
@@ -28,18 +24,7 @@ export default function Page() {
     }
   })
 
-  const mutation = useMutation({
-    mutationFn: (credentials: LoginForm) => axios.post(
-      (process.env.NEXT_PUBLIC_API ?? "") + '/api/auth/login',
-      credentials,
-      {
-        withCredentials: true
-      }
-    ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] })
-      navigate("/")
-    },
+  const loginMutation = useLoginMutation({
     onError: () => {
       form.setError("password", {
         message: "Password is wrong"
@@ -48,7 +33,7 @@ export default function Page() {
   })
 
   const onSubmit = (credentials: LoginForm) => {
-    mutation.mutate(credentials);
+    loginMutation.mutate(credentials);
   }
 
   return (
