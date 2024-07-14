@@ -166,11 +166,11 @@ func (devenv *DevenvController) Patch(ctx *gin.Context) {
 	}
 
 	if patchDevenvRequest.BuildCmd != "" {
-		devenvs[0].Name = patchDevenvRequest.BuildCmd
+		devenvs[0].BuildCmd = patchDevenvRequest.BuildCmd
 	}
 
 	if patchDevenvRequest.RunCmd != "" {
-		devenvs[0].Name = patchDevenvRequest.RunCmd
+		devenvs[0].RunCmd = patchDevenvRequest.RunCmd
 	}
 
 	database.DB.Save(&devenvs[0])

@@ -32,8 +32,6 @@ export function useDevenvCreateFileMutation(options: DevenvCreateFileMutationOpt
             return _data
           if (options.onSuccess)
             options.onSuccess(file)
-          // if (!selectedFile)
-          //   setSelectedFile(file.name)
           return [..._data, file.name].sort()
         }
       )

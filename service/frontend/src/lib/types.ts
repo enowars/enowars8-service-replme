@@ -22,6 +22,13 @@ export type CreateDevenvRequest = {
   runCmd: string
 }
 
+export type PatchDevenvRequest = {
+  name?: string,
+  buildCmd?: string,
+  runCmd?: string
+}
+
 export type CreateDevenvResponse = {
   devenvUuid: string,
 }
+

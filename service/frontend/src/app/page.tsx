@@ -23,7 +23,7 @@ export default function Page() {
           <CreateDevenvButton /> :
           <a href="/register">
             <Button>
-              <RocketIcon className="mr-2 h-4 w-4" /> Register for free
+              <RocketIcon className="mr-2 h-4 w-4" /> REGISTER!
             </Button>
           </a>}
         <CreateReplButton />

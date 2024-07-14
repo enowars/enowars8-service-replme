@@ -3,40 +3,45 @@
 import dynamic from "next/dynamic";
 import FileTree from "@/components/file-tree";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ExecTerm from "@/components/exec-term";
-import { Button } from "@/components/ui/button";
+import { useDevenvGeneration } from "@/hooks/use-devenv-generation";
+import { useDevenvGenerationMutation } from "@/hooks/use-devenv-generation-mutation";
 
 const Editor = dynamic(() => import('@/components/editor'), {
   ssr: false
 })
 
 export default function Page({ params }: { params: { slug: string } }) {
-  const [showTerminal, setShowTerminal] = useState<number>(0)
-
   const [currentFile, setCurrentFile] = useState<string>();
+
+  const devenvGenerationMutation = useDevenvGenerationMutation({ uuid: params.slug })
+  const generation = useDevenvGeneration({ uuid: params.slug })
+
+  useEffect(() => {
+    return () => {
+      devenvGenerationMutation.mutate(null)
+    }
+  }, [])
 
   return (
     <main className="h-screen w-screen pt-16">
       <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={15}>
+        <ResizablePanel id="file-tree-panel" defaultSize={15}>
           <div className="flex flex-col w-full h-full p-4 space-y-5">
-            <Button className="" onClick={() => setShowTerminal(showTerminal + 1)}>
-              Run
-            </Button>
             <FileTree className="flex flex-col w-full h-full space-y-5" devenvUuid={params.slug} selectedFile={currentFile} setSelectedFile={setCurrentFile} />
           </div>
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={85}>
           <ResizablePanelGroup direction="vertical">
-            <ResizablePanel>
+            <ResizablePanel id="editor-panel">
               <Editor className="w-full h-full" devenvUuid={params.slug} filename={currentFile} />
             </ResizablePanel>
-            {Boolean(showTerminal) && <>
+            {Boolean(generation) && <>
               <ResizableHandle />
-              <ResizablePanel>
-                <ExecTerm className="w-full h-full" id={String(showTerminal)} path={"/api/devenv/" + params.slug + "/exec"} />
+              <ResizablePanel id="terminal-panel">
+                <ExecTerm className="w-full h-full" id={String(generation)} path={"/api/devenv/" + params.slug + "/exec"} />
               </ResizablePanel>
             </>}
           </ResizablePanelGroup>
