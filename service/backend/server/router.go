@@ -16,7 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(docker *service.DockerService, dbPath string, containerLogsPath string, devenvFilesPath string, devenvFilesTmpPath string) *gin.Engine {
+func NewRouter(docker *service.DockerService, pgUrl string, containerLogsPath string, devenvFilesPath string, devenvFilesTmpPath string) *gin.Engine {
 
 	logLevel, exists := os.LookupEnv("REPL_LOG")
 	if !exists {
@@ -26,7 +26,7 @@ func NewRouter(docker *service.DockerService, dbPath string, containerLogsPath s
 	util.LoggerInit(logLevel)
 
 	util.SLogger.Info("Connecting to DB ..")
-	database.Connect(dbPath)
+	database.Connect(pgUrl)
 	util.SLogger.Info("Migrating DB ..")
 	database.Migrate()
 

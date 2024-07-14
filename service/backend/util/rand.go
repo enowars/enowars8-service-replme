@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"math/big"
 	"os"
+	"strings"
+	"time"
 )
 
 const LETTERS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -29,6 +31,19 @@ func RandomString(n int) (string, error) {
 	}
 
 	return string(ret), nil
+}
+
+func ReadPostgresSecret(postgresSecretPath string) string {
+	var bytes []byte
+	var err error
+	for i := 0; i < 20; i++ {
+		bytes, err = os.ReadFile(postgresSecretPath)
+		if err == nil {
+			return strings.TrimSpace(string(bytes))
+		}
+		time.Sleep(1 * time.Second)
+	}
+	panic(err)
 }
 
 func ApiKey(path string) string {

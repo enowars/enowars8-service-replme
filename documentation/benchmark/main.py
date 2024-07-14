@@ -28,7 +28,7 @@ def get_ip_address(ifname):
 CHECKER_ADDR = "http://127.0.0.1:16969"
 SERVICE_ADDR = get_ip_address("wlp3s0")
 
-VARIANTS = [0]
+VARIANTS = [0, 1]
 TICKS = 3
 MULTIPLIER = 1
 EXPLOITS_AMOUNT = 20

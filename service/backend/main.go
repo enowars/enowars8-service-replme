@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"os"
+	"strings"
 
 	"replme/server"
 	"replme/service"
@@ -12,7 +13,9 @@ import (
 func main() {
 	var imagePath string
 	var imageTag string
-	var dbPath string
+	var postgresUrl string
+	var postgresUser string
+	var postgresSecretPath string
 	var apiKeyPath string
 	var devenvsPath string
 	var devenvsTmpPath string
@@ -20,7 +23,9 @@ func main() {
 
 	flag.StringVar(&imagePath, "i", "", "Image dir (required)")
 	flag.StringVar(&imagePath, "n", "", "Image tag (required), env: REPL_IMG_TAG")
-	flag.StringVar(&dbPath, "d", "", "Database file (required), env: REPL_SQLITE")
+	flag.StringVar(&postgresUrl, "p", "", "Postgres connection url (required), env: REPL_POSTGRES_URL")
+	flag.StringVar(&postgresUser, "u", "", "Postgres user (required), env: REPL_POSTGRES_USER")
+	flag.StringVar(&postgresSecretPath, "s", "", "Postgres secret file (required), env: REPL_POSTGRES_SECRET")
 	flag.StringVar(&apiKeyPath, "k", "", "Apikey file (required), env: REPL_API_KEY")
 	flag.StringVar(&devenvsPath, "f", "", "Devenv files dir (required), env: REPL_DEVENVS")
 	flag.StringVar(&devenvsTmpPath, "t", "", "Tmp devenv files dir (required), env: REPL_DEVENVS_TMP")
@@ -42,13 +47,31 @@ func main() {
 		imageTag = imageTagEnv
 	}
 
-	if dbPath == "" {
-		dbPathEnv := os.Getenv("REPL_SQLITE")
-		if dbPathEnv == "" {
+	if postgresUrl == "" {
+		postgresUrlEnv := os.Getenv("REPL_POSTGRES_URL")
+		if postgresUrlEnv == "" {
 			flag.Usage()
 			os.Exit(1)
 		}
-		dbPath = dbPathEnv
+		postgresUrl = postgresUrlEnv
+	}
+
+	if postgresUser == "" {
+		postgresUserEnv := os.Getenv("REPL_POSTGRES_USER")
+		if postgresUserEnv == "" {
+			flag.Usage()
+			os.Exit(1)
+		}
+		postgresUser = postgresUserEnv
+	}
+
+	if postgresSecretPath == "" {
+		postgresSecretPathEnv := os.Getenv("REPL_POSTGRES_SECRET")
+		if postgresSecretPathEnv == "" {
+			flag.Usage()
+			os.Exit(1)
+		}
+		postgresSecretPath = postgresSecretPathEnv
 	}
 
 	if apiKeyPath == "" {
@@ -78,8 +101,6 @@ func main() {
 		devenvsTmpPath = devenvsTmpPathEnv
 	}
 
-	// REPL_CONTAINER_LOGS
-
 	if containerLogsPath == "" {
 		containerLogsPathTmp := os.Getenv("REPL_CONTAINER_LOGS")
 		if containerLogsPathTmp == "" {
@@ -94,5 +115,9 @@ func main() {
 	docker := service.Docker(apiKey, imagePath, imageTag, containerLogsPath)
 	docker.BuildImage()
 
-	server.Init(&docker, dbPath, containerLogsPath, devenvsPath, devenvsTmpPath)
+	pgSecret := util.ReadPostgresSecret(postgresSecretPath)
+	pgUrl := strings.ReplaceAll(postgresUrl, "{user}", postgresUser)
+	pgUrl = strings.ReplaceAll(pgUrl, "{secret}", pgSecret)
+
+	server.Init(&docker, pgUrl, containerLogsPath, devenvsPath, devenvsTmpPath)
 }

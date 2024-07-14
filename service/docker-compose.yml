@@ -12,6 +12,7 @@ services:
     container_name: replme-backend
     depends_on:
       - dind
+      - postgres
     build:
       context: .
       dockerfile: Dockerfile.backend
@@ -19,17 +20,30 @@ services:
       - docker-cert:/cert
       - replme-data:/data
       - devenvs-tmp:/devenvs
+      - postgres-secret:/postgres
     environment:
       - DOCKER_CERT_PATH=/cert/client
       - DOCKER_TLS_VERIFY=true
       - GIN_MODE=release
       - REPL_LOG=debug
+      - REPL_POSTGRES_URL=postgres://{user}:{secret}@replme-postgres:5432
+      - REPL_POSTGRES_USER=postgres
+      - REPL_POSTGRES_SECRET=/postgres/secret
       - REPL_IMG_TAG=ptwhy
-      - REPL_SQLITE=/data/replme.db
       - REPL_API_KEY=/data/apikey
       - REPL_DEVENVS=/data/devenvs
       - REPL_DEVENVS_TMP=/devenvs
       - REPL_CONTAINER_LOGS=/data/logs
+    restart: "unless-stopped"
+
+  postgres:
+    container_name: replme-postgres
+    build:
+      context: postgres
+      dockerfile: Dockerfile
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - postgres-secret:/root/data
     restart: "unless-stopped"
 
   dind:
@@ -67,6 +81,8 @@ services:
 
 volumes:
   replme-data:
+  postgres-data:
+  postgres-secret:
   devenvs-tmp:
   docker-cert:
   docker-data:
