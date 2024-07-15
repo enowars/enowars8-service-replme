@@ -4,6 +4,9 @@ import { useDevenvFileContentQuery } from '@/hooks/use-devenv-file-content-query
 import { useDevenvFileContentMutation } from '@/hooks/use-devenv-file-content-mutation';
 import MonacoEditor, { Monaco, OnChange } from '@monaco-editor/react';
 import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
+import { useDebounce } from "@uidotdev/usehooks";
+import { useDevenvStateMutation } from '@/hooks/use-devenv-state-mutation';
 
 type EditorProps = {
   className?: string,
@@ -11,21 +14,47 @@ type EditorProps = {
   filename?: string
 }
 
-const Editor: React.FC<EditorProps> = (props) => {
-  const { className, devenvUuid, filename } = props;
+type DebouncedEditorProps = {
+  className?: string,
+  devenvUuid: string,
+  filename: string,
+  initialContent: string,
+}
+
+const DebouncedEditor: React.FC<DebouncedEditorProps> = (props) => {
+  const { className, devenvUuid, filename, initialContent } = props;
 
   const { resolvedTheme } = useTheme();
   const editorTheme = resolvedTheme === "light" ? "light" : "dark";
 
-  const fileContentQuery = useDevenvFileContentQuery({
-    uuid: devenvUuid,
-    filename
-  })
+  const [content, setContent] = useState<string>(initialContent);
+  const debouncedContent = useDebounce(content, 1000)
 
   const fileContentMutation = useDevenvFileContentMutation({
     uuid: devenvUuid,
     filename
   })
+
+  const devenvStateMutation = useDevenvStateMutation({
+    uuid: devenvUuid,
+  })
+
+  useEffect(() => {
+    fileContentMutation.mutate(debouncedContent)
+  }, [debouncedContent, fileContentMutation.mutate])
+
+  const handleEditorChange: OnChange = (value, _) => {
+    if (value) {
+      devenvStateMutation.mutate("dirty")
+      setContent(value)
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      devenvStateMutation.mutate("ok")
+    }
+  }, []);
 
   const handleEditorWillMount = (monaco: Monaco) => {
     monaco.editor.defineTheme("dark", {
@@ -38,10 +67,26 @@ const Editor: React.FC<EditorProps> = (props) => {
     })
   }
 
-  const handleEditorChange: OnChange = (value, _) => {
-    if (value)
-      fileContentMutation.mutate(value);
-  }
+  return (
+    <MonacoEditor
+      key={filename}
+      className={className}
+      defaultValue={initialContent}
+      defaultLanguage='c'
+      theme={editorTheme}
+      beforeMount={handleEditorWillMount}
+      onChange={handleEditorChange}
+    />
+  )
+}
+
+const Editor: React.FC<EditorProps> = (props) => {
+  const { className, devenvUuid, filename } = props;
+
+  const fileContentQuery = useDevenvFileContentQuery({
+    uuid: devenvUuid,
+    filename
+  })
 
   if (!filename)
     return <></>
@@ -50,15 +95,16 @@ const Editor: React.FC<EditorProps> = (props) => {
     return <></>
   }
 
+  if (!fileContentQuery.isSuccess) {
+    return <>Loading file failed</>
+  }
+
   return (
-    <MonacoEditor
-      key={filename}
+    <DebouncedEditor
       className={className}
-      defaultValue={fileContentQuery.data}
-      defaultLanguage='c'
-      theme={editorTheme}
-      beforeMount={handleEditorWillMount}
-      onChange={handleEditorChange}
+      devenvUuid={devenvUuid}
+      filename={filename}
+      initialContent={fileContentQuery.data}
     />
   )
 }

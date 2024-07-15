@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useEffect } from "react";
-import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle, DrawerTrigger } from "./ui/drawer";
+import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle, DrawerTrigger } from "./ui/drawer";
 import { Button } from "./ui/button";
 import { GearIcon } from "@radix-ui/react-icons";
 import { z } from "zod";
@@ -115,11 +115,13 @@ const DevenvSettingsMenu: React.FC<DevenvSettingsMenuProps> = (props) => {
                     </FormItem>
                   )}
                 />
-                <Button
-                  className="w-full"
-                  disabled={!form.formState.isDirty}
-                  type="submit"
-                >Save</Button>
+                <DrawerClose asChild>
+                  <Button
+                    className="w-full"
+                    disabled={!form.formState.isDirty}
+                    type="submit"
+                  >Save</Button>
+                </DrawerClose>
               </form>
             </Form>
           </div>

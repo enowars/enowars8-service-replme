@@ -10,9 +10,11 @@ import { useUserQuery } from "@/hooks/use-user-query";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
 import { useDevenvGenerationMutation } from "@/hooks/use-devenv-generation-mutation";
-import { PlayIcon } from '@radix-ui/react-icons'
+import { CheckIcon, CircleIcon, PlayIcon, ReloadIcon } from '@radix-ui/react-icons'
 import DevenvSettingsMenu from "./devenv-settings-menu";
 import CreateDevenvFileMenu from "./create-devenv-file-menu";
+import { useMutationState } from "@tanstack/react-query";
+import { useDevenvState } from "@/hooks/use-devenv-state";
 
 const Navbar = () => {
   const pathname = usePathname();
@@ -24,6 +26,15 @@ const Navbar = () => {
 
   const devenvGenerationMutation = useDevenvGenerationMutation({
     uuid: devenvUuid
+  })
+
+  const devenvFileContentMutationsStatus = useMutationState({
+    filters: { mutationKey: ['devenv', devenvUuid, 'files'] },
+    select: (mutation) => mutation.state.status
+  })
+
+  const devenvState = useDevenvState({
+    uuid: devenvUuid ?? ""
   })
 
   return (
@@ -42,7 +53,19 @@ const Navbar = () => {
             </Button>
             <CreateDevenvFileMenu uuid={devenvUuid} />
             <DevenvSettingsMenu uuid={devenvUuid} />
-          </div>}
+            {
+              devenvState === "dirty" ?
+                devenvFileContentMutationsStatus.includes("pending") ?
+                  <ReloadIcon className="mr-2 h-4 w-4 animate-spin" /> :
+                  <CircleIcon className="mr-2 h-4 w-4 text-yellow-500" />
+                :
+                <div className="flex flex-row items-center space-x-2 text-green-500">
+                  <CheckIcon /><div>Saved</div>
+                </div>
+
+            }
+          </div>
+          }
         </div>
         <div className="flex flex-row items-center space-x-3">
           {isAuthenticatedMode && <DevenvMenu />}
