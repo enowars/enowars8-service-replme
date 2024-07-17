@@ -1,6 +1,6 @@
 from random import randrange
 
-from util import ShellCommandChain, shchain, sh
+from util import ShellCommandChain, sh, shchain
 
 NOISE: list[ShellCommandChain] = [
     shchain(

@@ -1,6 +1,7 @@
-import string
+import base64
 import random
 import re
+import string
 from logging import LoggerAdapter
 
 from enochecker3.chaindb import ChainDB
@@ -15,8 +16,6 @@ from enochecker3.types import (
 )
 from enochecker3.utils import assert_equals
 from httpx import AsyncClient
-import base64
-
 from websockets.exceptions import ConnectionClosedError, InvalidStatusCode
 
 from exploit import exploit0_apply_delta
@@ -30,10 +29,10 @@ from util import (
     do_user_login,
     do_user_register,
     get_sessions,
-    sh,
-    repl_websocket,
     repl_create,
     repl_login,
+    repl_websocket,
+    sh,
     user_login,
     user_register,
 )

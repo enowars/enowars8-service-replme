@@ -1,11 +1,11 @@
-import string
-import random
 import asyncio
+import random
 import re
+import string
 from logging import LoggerAdapter
 from typing import List, Optional
-import websockets
 
+import websockets
 from enochecker3.chaindb import ChainDB
 from enochecker3.types import MumbleException
 from enochecker3.utils import assert_equals
