@@ -6,6 +6,5 @@ export function LoginButton() {
     <Button variant="outline" onClick={() => navigate("/login")}>
       LOGIN
     </Button>
-  )
+  );
 }
-

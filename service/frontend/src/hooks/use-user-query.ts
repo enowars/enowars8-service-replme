@@ -6,14 +6,14 @@ import axios from "axios";
 
 export function useUserQuery() {
   return useQuery({
-    queryKey: ['user'],
-    queryFn: () => axios.get<GetUserResponse>(
-      (process.env.NEXT_PUBLIC_API ?? "") + "/api/auth/user",
-      {
-        withCredentials: true
-      }
-    ),
+    queryKey: ["user"],
+    queryFn: () =>
+      axios.get<GetUserResponse>(
+        (process.env.NEXT_PUBLIC_API ?? "") + "/api/auth/user",
+        {
+          withCredentials: true,
+        },
+      ),
     staleTime: Infinity,
-  })
+  });
 }
-

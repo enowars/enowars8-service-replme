@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Drawer,
   DrawerClose,
@@ -9,7 +9,7 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-} from "@/components/ui/drawer"
+} from "@/components/ui/drawer";
 import { CodeIcon } from "@radix-ui/react-icons";
 import { navigate } from "@/actions/navigate";
 import CreateDevenvButton from "./create-devenv-button";
@@ -24,7 +24,11 @@ const DevenvMenu = () => {
       <DrawerTrigger asChild>
         <Button className="relative" variant="outline" size="icon">
           <CodeIcon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all" />
-          {Boolean(numSessions) && <div className="absolute w-5 h-5 bg-red-400 -top-2 -right-2 rounded-full text-white">{numSessions}</div>}
+          {Boolean(numSessions) && (
+            <div className="absolute w-5 h-5 bg-red-400 -top-2 -right-2 rounded-full text-white">
+              {numSessions}
+            </div>
+          )}
         </Button>
       </DrawerTrigger>
       <DrawerContent className="w-full">
@@ -37,7 +41,10 @@ const DevenvMenu = () => {
           <div className="flex flex-row justify-center items-center w-full space-x-5 overflow-auto">
             {devenvsQuery.data?.data?.map((devenv) => (
               <DrawerClose asChild key={devenv.id}>
-                <Button variant="outline" onClick={() => navigate("/devenv/" + devenv.id)}>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/devenv/" + devenv.id)}
+                >
                   {devenv.name}
                 </Button>
               </DrawerClose>
@@ -49,7 +56,7 @@ const DevenvMenu = () => {
         </div>
       </DrawerContent>
     </Drawer>
-  )
-}
+  );
+};
 
 export default DevenvMenu;

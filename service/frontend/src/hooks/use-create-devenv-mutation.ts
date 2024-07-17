@@ -9,16 +9,17 @@ export function useCreateDevenvMutation() {
   const client = useQueryClient();
 
   return useMutation({
-    mutationFn: (credentials: CreateDevenvRequest) => axios.post<CreateDevenvResponse>(
-      (process.env.NEXT_PUBLIC_API ?? "") + '/api/devenv',
-      credentials,
-      {
-        withCredentials: true
-      }
-    ),
+    mutationFn: (credentials: CreateDevenvRequest) =>
+      axios.post<CreateDevenvResponse>(
+        (process.env.NEXT_PUBLIC_API ?? "") + "/api/devenv",
+        credentials,
+        {
+          withCredentials: true,
+        },
+      ),
     onSuccess: (response) => {
-      client.invalidateQueries({ queryKey: ['devenvs'] })
-      navigate("/devenv/" + response.data.devenvUuid)
+      client.invalidateQueries({ queryKey: ["devenvs"] });
+      navigate("/devenv/" + response.data.devenvUuid);
     },
-  })
+  });
 }

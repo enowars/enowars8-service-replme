@@ -2,12 +2,12 @@ import "./globals.css";
 import "@xterm/xterm/css/xterm.css";
 
 import type { Metadata } from "next";
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "@/components/theme-provider";
 import Navbar from "@/components/navigation-bar";
-import localFont from 'next/font/local';
+import localFont from "next/font/local";
 import ReactQueryProvider from "@/components/react-query-provider";
 
-const dejaVuFont = localFont({ src: './DejaVuSansMNerdFontMono-Regular.ttf' })
+const dejaVuFont = localFont({ src: "./DejaVuSansMNerdFontMono-Regular.ttf" });
 
 export const metadata: Metadata = {
   title: "replme",

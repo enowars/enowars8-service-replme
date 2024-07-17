@@ -4,14 +4,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useLoginMutation } from "@/hooks/use-login-mutation";
 
 const LoginFormSchema = z.object({
   username: z.string().min(1, { message: "Username can't be empty" }),
-  password: z.string().min(1, { message: "Password can't be empty" })
-})
+  password: z.string().min(1, { message: "Password can't be empty" }),
+});
 
 type LoginForm = z.infer<typeof LoginFormSchema>;
 
@@ -21,20 +27,20 @@ export default function Page() {
     defaultValues: {
       username: "",
       password: "",
-    }
-  })
+    },
+  });
 
   const loginMutation = useLoginMutation({
     onError: () => {
       form.setError("password", {
-        message: "Password is wrong"
-      })
-    }
-  })
+        message: "Password is wrong",
+      });
+    },
+  });
 
   const onSubmit = (credentials: LoginForm) => {
     loginMutation.mutate(credentials);
-  }
+  };
 
   return (
     <main className="flex h-screen w-screen flex-col items-center p-24 justify-center space-y-5">

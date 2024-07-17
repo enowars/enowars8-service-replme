@@ -1,6 +1,6 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod"
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Drawer,
   DrawerClose,
@@ -9,15 +9,14 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-} from "@/components/ui/drawer"
+} from "@/components/ui/drawer";
 import { Button } from "./ui/button";
 import { PlusIcon } from "@radix-ui/react-icons";
-import { Form, FormControl, FormField, FormItem } from "./ui/form"
-import { z } from "zod"
-import { useForm } from "react-hook-form"
+import { Form, FormControl, FormField, FormItem } from "./ui/form";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
 import { useDevenvCreateFileMutation } from "@/hooks/use-devenv-create-file-mutation";
-import { Input } from "./ui/input"
-
+import { Input } from "./ui/input";
 
 const CreateFileFormSchema = z.object({
   name: z.string().min(1).max(30),
@@ -26,25 +25,24 @@ const CreateFileFormSchema = z.object({
 type CreateFileForm = z.infer<typeof CreateFileFormSchema>;
 
 export type CreateDevenvFileMenuProps = {
-  uuid: string,
-}
+  uuid: string;
+};
 
 const CreateDevenvFileMenu: React.FC<CreateDevenvFileMenuProps> = (props) => {
-
   const createFileMutation = useDevenvCreateFileMutation({
     uuid: props.uuid,
-  })
+  });
 
   const form = useForm<CreateFileForm>({
     resolver: zodResolver(CreateFileFormSchema),
     defaultValues: {
       name: "",
-    }
-  })
+    },
+  });
 
   const onCreateFileSubmit = (file: CreateFileForm) => {
-    createFileMutation.mutate(file)
-  }
+    createFileMutation.mutate(file);
+  };
 
   return (
     <Drawer>
@@ -61,7 +59,10 @@ const CreateDevenvFileMenu: React.FC<CreateDevenvFileMenuProps> = (props) => {
           </DrawerHeader>
           <div className="flex flex-row justify-center items-center w-full space-x-5 overflow-auto py-5">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onCreateFileSubmit)} className="space-y-5 w-full max-w-lg ">
+              <form
+                onSubmit={form.handleSubmit(onCreateFileSubmit)}
+                className="space-y-5 w-full max-w-lg "
+              >
                 <FormField
                   control={form.control}
                   name="name"
@@ -84,7 +85,7 @@ const CreateDevenvFileMenu: React.FC<CreateDevenvFileMenuProps> = (props) => {
         </div>
       </DrawerContent>
     </Drawer>
-  )
-}
+  );
+};
 
 export default CreateDevenvFileMenu;

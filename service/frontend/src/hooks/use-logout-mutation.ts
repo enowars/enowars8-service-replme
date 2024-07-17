@@ -8,18 +8,17 @@ export function useLogoutMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => axios.post(
-      (process.env.NEXT_PUBLIC_API ?? "") + '/api/auth/logout',
-      undefined,
-      {
-        withCredentials: true
-      }
-    ),
+    mutationFn: () =>
+      axios.post(
+        (process.env.NEXT_PUBLIC_API ?? "") + "/api/auth/logout",
+        undefined,
+        {
+          withCredentials: true,
+        },
+      ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user'] })
-      navigate("/")
-    }
-  })
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      navigate("/");
+    },
+  });
 }
-
-

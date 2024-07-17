@@ -1,5 +1,5 @@
-import type { Terminal, IDisposable, ITerminalAddon } from '@xterm/xterm';
-import type { AttachAddon as IAttachApi } from '@xterm/addon-attach';
+import type { Terminal, IDisposable, ITerminalAddon } from "@xterm/xterm";
+import type { AttachAddon as IAttachApi } from "@xterm/addon-attach";
 
 interface IAttachOptions {
   bidirectional?: boolean;
@@ -13,41 +13,49 @@ export class AttachAddon implements ITerminalAddon, IAttachApi {
   constructor(socket: WebSocket, options?: IAttachOptions) {
     this._socket = socket;
     // always set binary type to arraybuffer, we do not handle blobs
-    this._socket.binaryType = 'arraybuffer';
+    this._socket.binaryType = "arraybuffer";
     this._bidirectional = !(options && options.bidirectional === false);
   }
 
   public activate(terminal: Terminal): void {
     this._disposables.push(
-      addSocketListener(this._socket, 'message', ev => {
+      addSocketListener(this._socket, "message", (ev) => {
         const data: ArrayBuffer | string = ev.data;
-        terminal.write(typeof data === 'string' ? data : new Uint8Array(data));
-      })
+        terminal.write(typeof data === "string" ? data : new Uint8Array(data));
+      }),
     );
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.code === "Escape") {
         event.preventDefault();
-        this._socket.send(JSON.stringify({ stdin: '\x1B' }));
+        this._socket.send(JSON.stringify({ stdin: "\x1B" }));
         terminal.focus();
       }
-    }
+    };
 
-    document.addEventListener('keydown', handleEscape);
+    document.addEventListener("keydown", handleEscape);
     this._disposables.push({
       dispose() {
-        document.removeEventListener('keydown', handleEscape);
+        document.removeEventListener("keydown", handleEscape);
       },
-    })
+    });
 
     if (this._bidirectional) {
-      this._disposables.push(terminal.onData(data => this._sendData(data)));
-      this._disposables.push(terminal.onBinary(data => this._sendBinary(data)));
-      this._disposables.push(terminal.onResize(data => this._sendResize(data)));
+      this._disposables.push(terminal.onData((data) => this._sendData(data)));
+      this._disposables.push(
+        terminal.onBinary((data) => this._sendBinary(data)),
+      );
+      this._disposables.push(
+        terminal.onResize((data) => this._sendResize(data)),
+      );
     }
 
-    this._disposables.push(addSocketListener(this._socket, 'close', () => this.dispose()));
-    this._disposables.push(addSocketListener(this._socket, 'error', () => this.dispose()));
+    this._disposables.push(
+      addSocketListener(this._socket, "close", () => this.dispose()),
+    );
+    this._disposables.push(
+      addSocketListener(this._socket, "error", () => this.dispose()),
+    );
   }
 
   public dispose(): void {
@@ -72,7 +80,7 @@ export class AttachAddon implements ITerminalAddon, IAttachApi {
       return;
     }
 
-    data = this._toStdin(data)
+    data = this._toStdin(data);
 
     const buffer = new Uint8Array(data.length);
     for (let i = 0; i < data.length; ++i) {
@@ -81,7 +89,7 @@ export class AttachAddon implements ITerminalAddon, IAttachApi {
     this._socket.send(buffer);
   }
 
-  private _sendResize(data: { cols: number, rows: number }): void {
+  private _sendResize(data: { cols: number; rows: number }): void {
     if (!this._checkOpenSocket()) {
       return;
     }
@@ -94,19 +102,23 @@ export class AttachAddon implements ITerminalAddon, IAttachApi {
       case WebSocket.OPEN:
         return true;
       case WebSocket.CONNECTING:
-        throw new Error('Attach addon was loaded before socket was open');
+        throw new Error("Attach addon was loaded before socket was open");
       case WebSocket.CLOSING:
-        console.warn('Attach addon socket is closing');
+        console.warn("Attach addon socket is closing");
         return false;
       case WebSocket.CLOSED:
-        throw new Error('Attach addon socket is closed');
+        throw new Error("Attach addon socket is closed");
       default:
-        throw new Error('Unexpected socket state');
+        throw new Error("Unexpected socket state");
     }
   }
 }
 
-function addSocketListener<K extends keyof WebSocketEventMap>(socket: WebSocket, type: K, handler: (this: WebSocket, ev: WebSocketEventMap[K]) => any): IDisposable {
+function addSocketListener<K extends keyof WebSocketEventMap>(
+  socket: WebSocket,
+  type: K,
+  handler: (this: WebSocket, ev: WebSocketEventMap[K]) => any,
+): IDisposable {
   socket.addEventListener(type, handler);
   return {
     dispose: () => {
@@ -115,6 +127,6 @@ function addSocketListener<K extends keyof WebSocketEventMap>(socket: WebSocket,
         return;
       }
       socket.removeEventListener(type, handler);
-    }
+    },
   };
 }
