@@ -20,6 +20,17 @@ export default function Page() {
           Hack together your ideas in development environments, use a throwaway
           shell - all in one place.
         </div>
+        <div className="flex flex-row items-center space-x-3">
+          <div className="py-1 px-3 border rounded-xl border-black dark:border-white">
+            🔐 100% E2EE
+          </div>
+          <div className="py-1 px-3 border rounded-xl border-black dark:border-white">
+            🦾 100% Reliability
+          </div>
+          <div className="py-1 px-3 border rounded-xl border-black dark:border-white">
+            🚀 Blazingly fast
+          </div>
+        </div>
         <div className="flex flex-row space-x-3 items-center">
           {isAuthenticatedMode ? (
             <CreateDevenvButton />
