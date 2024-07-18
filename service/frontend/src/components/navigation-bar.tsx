@@ -22,12 +22,15 @@ import CreateDevenvFileMenu from "./create-devenv-file-menu";
 import { useMutationState } from "@tanstack/react-query";
 import { useDevenvState } from "@/hooks/use-devenv-state";
 import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 const Navbar = () => {
   const pathname = usePathname();
   const { resolvedTheme } = useTheme();
   const userQuery = useUserQuery();
   const isAuthenticatedMode = !userQuery.isStale && userQuery.isSuccess;
+
+  const [theme, setTheme] = useState("light");
 
   const match = pathname.match(
     "(?<=/devenv/)[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}",
@@ -48,6 +51,10 @@ const Navbar = () => {
     uuid: devenvUuid ?? "",
   });
 
+  useEffect(() => {
+    setTheme(resolvedTheme ?? "light");
+  }, [resolvedTheme]);
+
   return (
     <nav className="w-full fixed px-10 xs:px-20 py-3 light:bg-white/50 backdrop-blur-lg z-30">
       <div className="flex flex-row justify-between items-center">
@@ -58,9 +65,9 @@ const Navbar = () => {
           >
             <Image
               src={
-                resolvedTheme === "light"
-                  ? "/favico-alpha-black.png"
-                  : "/favico-alpha-white.png"
+                theme === "dark"
+                  ? "/favico-alpha-white.png"
+                  : "/favico-alpha-black.png"
               }
               width={25}
               height={25}
