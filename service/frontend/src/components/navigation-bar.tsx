@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ModeToggle } from "./mode-toggle";
 import ReplMenu from "./repl-menu";
@@ -20,9 +21,11 @@ import DevenvSettingsMenu from "./devenv-settings-menu";
 import CreateDevenvFileMenu from "./create-devenv-file-menu";
 import { useMutationState } from "@tanstack/react-query";
 import { useDevenvState } from "@/hooks/use-devenv-state";
+import { useTheme } from "next-themes";
 
 const Navbar = () => {
   const pathname = usePathname();
+  const { resolvedTheme } = useTheme();
   const userQuery = useUserQuery();
   const isAuthenticatedMode = !userQuery.isStale && userQuery.isSuccess;
 
@@ -49,13 +52,26 @@ const Navbar = () => {
     <nav className="w-full fixed px-10 xs:px-20 py-3 light:bg-white/50 backdrop-blur-lg z-30">
       <div className="flex flex-row justify-between items-center">
         <div className="flex flex-row items-center space-x-10">
-          <Link href="/" className="text-2xl font-bold">
-            replme
+          <Link
+            href="/"
+            className="flex flex-row items-center space-x-5 text-2xl font-bold"
+          >
+            <Image
+              src={
+                resolvedTheme === "light"
+                  ? "/favico-alpha-black.png"
+                  : "/favico-alpha-white.png"
+              }
+              width={25}
+              height={25}
+              alt=""
+            />
+            <div>replme</div>
           </Link>
           {devenvUuid && (
             <div className="flex flex-row items-center space-x-3">
               <Button
-                className="bg-green-600 hover:bg-green-800"
+                className="bg-green-600 dark:bg-green-300 hover:bg-green-800 dark:hover:bg-green-400"
                 onClick={() => devenvGenerationMutation.mutate(undefined)}
               >
                 <PlayIcon className="mr-2 h-4 w-4" /> Run

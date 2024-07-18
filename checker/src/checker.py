@@ -219,9 +219,9 @@ async def havoc0(
     )
 
     assert_equals(
-        (await client.get("/favicon.ico", follow_redirects=True)).status_code < 300,
+        (await client.get("/icon.png", follow_redirects=True)).status_code < 300,
         True,
-        "Failed to get favicon.ico",
+        "Failed to get icon.png",
     )
 
     pattern = r'[href|src]="(/[^"]*)"'

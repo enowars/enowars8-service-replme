@@ -12,7 +12,7 @@ export default function Page() {
   const isAuthenticatedMode = !userQuery.isStale && userQuery.isSuccess;
 
   return (
-    <main className="flex h-screen w-screen flex-row p-24">
+    <main className="flex h-screen w-screen flex-row pl-24 pr-5 py-24 space-x-10">
       <div className="flex h-full w-full flex-col items-center justify-center space-y-5 grow-0">
         <div className="text-2xl italic">Want a clean /home?</div>
         <div className="text-5xl font-bold">Use replme!</div>
