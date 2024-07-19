@@ -103,12 +103,19 @@ func (docker *DockerService) BuildImage() {
 		log.Fatal(err, " :unable to create tar")
 	}
 
+	httpProxy := "http://proxy.prod.bambi.ovh:3128"
+	buildArgs := make(map[string]*string)
+	buildArgs["http_proxy"] = &httpProxy
+	buildArgs["https_proxy"] = &httpProxy
+	buildArgs["HTTP_PROXY"] = &httpProxy
+	buildArgs["HTTPS_PROXY"] = &httpProxy
 	opts := dockerTypes.ImageBuildOptions{
 		Dockerfile: "Dockerfile",
 		Tags:       []string{docker.ImgTag},
 		Remove:     true,
 		// ForceRemove: true,
 		// NoCache:     true,
+		BuildArgs: buildArgs,
 	}
 
 	res, err := docker.Client.ImageBuild(docker.Context, tar, opts)
