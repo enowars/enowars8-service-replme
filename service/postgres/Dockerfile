@@ -1,4 +1,4 @@
-FROM postgres:latest
+FROM postgres@sha256:0aafd2ae7e6c391f39fb6b7621632d79f54068faebc726caf469e87bd1d301c0
 
 RUN apt-get update; apt-get install -y --no-install-recommends pwgen
 
