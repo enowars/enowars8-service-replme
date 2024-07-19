@@ -23,7 +23,12 @@ from noise import get_noise, get_noise1, get_random_noise, get_random_noise1
 from util import (
     create_devenv,
     do_create_devenv,
+    do_create_devenv_file,
+    do_delete_devenv_file,
+    do_get_devenv,
     do_get_devenv_file_content,
+    do_get_devenv_files,
+    do_patch_devenv,
     do_repl_auth,
     do_set_devenv_file_content,
     do_user_login,
@@ -379,6 +384,41 @@ async def getnoise1(
         "main.c",
     )
     assert_equals(noise.strip(), payload.strip(), "Wrong file content")
+
+
+@checker.havoc(1)
+async def havoc1(
+    client: AsyncClient,
+    logger: LoggerAdapter,
+):
+    username = "".join(random.choice(string.ascii_lowercase) for _ in range(35))
+    password = "".join(random.choice(string.ascii_lowercase) for _ in range(35))
+    await do_user_register(client, logger, username, password)
+    cookies = await do_user_login(client, logger, username, password)
+
+    name = "".join(random.choice(string.ascii_lowercase) for _ in range(10))
+    buildCmd = "".join(random.choice(string.ascii_lowercase) for _ in range(10))
+    runCmd = "".join(random.choice(string.ascii_lowercase) for _ in range(10))
+
+    devenvUuid = await do_create_devenv(client, logger, cookies, name, buildCmd, runCmd)
+    devenv = await do_get_devenv(client, logger, cookies, devenvUuid)
+    assert_equals(name, devenv["name"], "Devenv has invalid name")
+    assert_equals(buildCmd, devenv["buildCmd"], "Devenv has invalid buildCmd")
+    assert_equals(runCmd, devenv["runCmd"], "Devenv has invalid runCmd")
+
+    name = "".join(random.choice(string.ascii_lowercase) for _ in range(10))
+    await do_patch_devenv(client, logger, cookies, devenvUuid, name=name)
+    devenv = await do_get_devenv(client, logger, cookies, devenvUuid)
+    assert_equals(name, devenv["name"], "After patch: Devenv has invalid name")
+
+    filename = "".join(random.choice(string.ascii_lowercase) for _ in range(10))
+    await do_create_devenv_file(client, logger, cookies, devenvUuid, filename)
+    files = await do_get_devenv_files(client, logger, cookies, devenvUuid)
+    assert_equals(filename in files, True, "Create file did not create file")
+
+    await do_delete_devenv_file(client, logger, cookies, devenvUuid, filename)
+    files = await do_get_devenv_files(client, logger, cookies, devenvUuid)
+    assert_equals(filename not in files, True, "Delete file did not delete file")
 
 
 if __name__ == "__main__":

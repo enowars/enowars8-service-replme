@@ -51,7 +51,7 @@ SERVICE_ADDR = get_ip_address("wlp3s0")
 
 VARIANTS: TVariants = {
     0: ["putflag", "getflag", "exploit", "putnoise", "getnoise"],
-    1: ["putflag", "getflag", "exploit", "putnoise", "getnoise"],
+    1: ["putflag", "getflag", "exploit", "putnoise", "getnoise", "havoc"],
 }
 TICKS = 3
 MULTIPLIER = 1
@@ -144,6 +144,10 @@ class Variant:
         return f"{self.chain_prefix}_noise_s0_r{self.round_id}_t0_i0"
 
     @property
+    def havoc_chain_id(self) -> str:
+        return f"{self.chain_prefix}_havoc_s0_r{self.round_id}_t0_i0"
+
+    @property
     def putflag_payload(self) -> CheckerPayload:
         payload = self.payload_stub
         payload["flag"] = self.flag
@@ -183,6 +187,13 @@ class Variant:
         payload["taskChainId"] = self.getnoise_chain_id
         return payload
 
+    @property
+    def havoc_payload(self) -> CheckerPayload:
+        payload = self.payload_stub
+        payload["method"] = "havoc"
+        payload["taskChainId"] = self.getnoise_chain_id
+        return payload
+
     async def request(self, method: TMethod):
         if method not in self.methods:
             return None
@@ -198,6 +209,8 @@ class Variant:
                 payload = self.putnoise_payload
             case "getnoise":
                 payload = self.getnoise_payload
+            case "havoc":
+                payload = self.havoc_payload
         start = time.monotonic()
         response = await self.session.post("/", json=payload)
         if response.status == 200:
@@ -257,7 +270,7 @@ async def main():
     tasks: List[asyncio.Task] = []
 
     async with aiohttp.ClientSession(CHECKER_ADDR) as client:
-        for i in range(10):
+        for i in range(1):
             round = Round(
                 client,
                 curr_round,
@@ -265,8 +278,9 @@ async def main():
                 multiplier=MULTIPLIER,
                 exploits_amount=EXPLOITS_AMOUNT,
             )
-            await round.request("putnoise")
-            await round.request("getnoise")
+            await round.request("havoc")
+            # await round.request("putnoise")
+            # await round.request("getnoise")
             curr_round += 1
         # for i in range(10):
         #     round = Round(

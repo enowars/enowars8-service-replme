@@ -1,4 +1,5 @@
 import asyncio
+import collections.abc
 import random
 import re
 import string
@@ -201,6 +202,109 @@ async def create_devenv(
     name = "".join(random.choice(string.ascii_lowercase) for _ in range(10))
     devenvUuid = await do_create_devenv(client, logger, cookies, name, buildCmd, runCmd)
     return devenvUuid
+
+
+async def do_get_devenv(
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    cookies: Cookies,
+    devenvUuid: str,
+):
+
+    response = await client.get(
+        "/api/devenv/" + devenvUuid,
+        follow_redirects=True,
+        headers={"Cookie": "session=" + (cookies.get("session") or "")},
+    )
+    logger.info(f"Server answered: {response.status_code} - {response.text}")
+    assert_equals(response.status_code < 300, True, "Getting devenv failed")
+    return response.json()
+
+
+async def do_patch_devenv(
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    cookies: Cookies,
+    devenvUuid: str,
+    name: str = "",
+    buildCmd: str = "",
+    runCmd: str = "",
+):
+    response = await client.patch(
+        "/api/devenv/" + devenvUuid,
+        json={
+            "name": name,
+            "buildCmd": buildCmd,
+            "runCmd": runCmd,
+        },
+        follow_redirects=True,
+        headers={
+            "Cookie": "session=" + (cookies.get("session") or ""),
+        },
+    )
+    logger.info(f"Server answered: {response.status_code} - {response.text}")
+    assert_equals(response.status_code < 300, True, "Patching devenv failed")
+
+
+async def do_get_devenv_files(
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    cookies: Cookies,
+    devenvUuid: str,
+):
+    response = await client.get(
+        "/api/devenv/" + devenvUuid + "/files",
+        follow_redirects=True,
+        headers={
+            "Cookie": "session=" + (cookies.get("session") or ""),
+        },
+    )
+    logger.info(f"Server answered: {response.status_code} - {response.text}")
+    assert_equals(response.status_code < 300, True, "Getting devenv files failed")
+    files = response.json()
+    assert_equals(
+        isinstance(files, collections.abc.Sequence),
+        True,
+        "Get files did not return array",
+    )
+    return files
+
+
+async def do_create_devenv_file(
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    cookies: Cookies,
+    devenvUuid: str,
+    filename: str,
+):
+    response = await client.post(
+        "/api/devenv/" + devenvUuid + "/files",
+        json={"name": filename},
+        follow_redirects=True,
+        headers={
+            "Cookie": "session=" + (cookies.get("session") or ""),
+        },
+    )
+    logger.info(f"Server answered: {response.status_code} - {response.text}")
+    assert_equals(response.status_code < 300, True, "Creating devenv file failed")
+
+
+async def do_delete_devenv_file(
+    client: AsyncClient,
+    logger: LoggerAdapter,
+    cookies: Cookies,
+    devenvUuid: str,
+    filename: str,
+):
+    response = await client.delete(
+        "/api/devenv/" + devenvUuid + "/files/" + filename,
+        follow_redirects=True,
+        headers={
+            "Cookie": "session=" + (cookies.get("session") or ""),
+        },
+    )
+    logger.info(f"Server answered: {response.status_code} - {response.text}")
+    assert_equals(response.status_code < 300, True, "Deleting devenv file failed")
 
 
 async def do_set_devenv_file_content(
