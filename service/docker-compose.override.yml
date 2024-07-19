@@ -1,0 +1,22 @@
+services:
+  frontend:
+    build:
+      args:
+        http_proxy: http://proxy.prod.bambi.ovh:3128
+        https_proxy: http://proxy.prod.bambi.ovh:3128
+        HTTP_PROXY: http://proxy.prod.bambi.ovh:3128
+        HTTPS_PROXY: http://proxy.prod.bambi.ovh:3128
+  backend:
+    build:
+      args:
+        http_proxy: http://proxy.prod.bambi.ovh:3128
+        https_proxy: http://proxy.prod.bambi.ovh:3128
+        HTTP_PROXY: http://proxy.prod.bambi.ovh:3128
+        HTTPS_PROXY: http://proxy.prod.bambi.ovh:3128
+  postgres:
+    build:
+      args:
+        http_proxy: http://proxy.prod.bambi.ovh:3128
+        https_proxy: http://proxy.prod.bambi.ovh:3128
+        HTTP_PROXY: http://proxy.prod.bambi.ovh:3128
+        HTTPS_PROXY: http://proxy.prod.bambi.ovh:3128
