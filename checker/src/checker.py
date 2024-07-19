@@ -14,12 +14,12 @@ from enochecker3.types import (
     PutflagCheckerTaskMessage,
     PutnoiseCheckerTaskMessage,
 )
-from enochecker3.utils import assert_equals
+from enochecker3.utils import assert_equals, assert_in
 from httpx import AsyncClient
 from websockets.exceptions import ConnectionClosedError, InvalidStatusCode
 
 from exploit import exploit0_apply_delta
-from noise import get_noise, get_random_noise
+from noise import get_noise, get_noise1, get_random_noise, get_random_noise1
 from util import (
     create_devenv,
     do_create_devenv,
@@ -328,6 +328,57 @@ async def exploit1(
         raise MumbleException("Connection was closed")
     except InvalidStatusCode:
         raise MumbleException("Invalid status code")
+
+
+@checker.putnoise(1)
+async def putnoise1(
+    task: PutnoiseCheckerTaskMessage,
+    client: AsyncClient,
+    db: ChainDB,
+    logger: LoggerAdapter,
+):
+    (username, password) = await user_register(client, logger, db)
+    cookies = await do_user_login(client, logger, username, password)
+    devenvUuid = await create_devenv(
+        client, logger, cookies, "gcc -o main main.c", "./main"
+    )
+    (i, noise) = get_random_noise1()
+    await db.set("devenvUuid", devenvUuid)
+    await do_set_devenv_file_content(
+        client, logger, cookies, devenvUuid, "main.c", noise
+    )
+
+    await db.set("noise_id", i)
+
+
+@checker.getnoise(1)
+async def getnoise1(
+    task: GetnoiseCheckerTaskMessage,
+    client: AsyncClient,
+    db: ChainDB,
+    logger: LoggerAdapter,
+):
+
+    cookies = await user_login(client, logger, db)
+    try:
+        devenvUuid = await db.get("devenvUuid")
+    except KeyError:
+        raise MumbleException("Missing database entry from putflag")
+    try:
+        i = await db.get("noise_id")
+    except KeyError:
+        raise MumbleException("noise_id not present in chaindb")
+    if not isinstance(i, int):
+        raise MumbleException("noise_id is not a int: " + str(i))
+    noise = get_noise1(i)
+    payload = await do_get_devenv_file_content(
+        client,
+        logger,
+        cookies,
+        devenvUuid,
+        "main.c",
+    )
+    assert_equals(noise.strip(), payload.strip(), "Wrong file content")
 
 
 if __name__ == "__main__":
