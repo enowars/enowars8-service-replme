@@ -50,10 +50,10 @@ CHECKER_ADDR = "http://127.0.0.1:16969"
 SERVICE_ADDR = get_ip_address("wlp3s0")
 
 VARIANTS: TVariants = {
-    0: ["putflag", "getflag", "exploit", "putnoise", "getnoise"],
+    0: ["putflag", "getflag", "exploit", "putnoise", "getnoise", "havoc"],
     1: ["putflag", "getflag", "exploit", "putnoise", "getnoise", "havoc"],
 }
-TICKS = 3
+TICKS = 20
 MULTIPLIER = 1
 EXPLOITS_AMOUNT = 20
 EXPLOIT_PAST_ROUNDS = 10
@@ -251,12 +251,18 @@ class Round:
 
         return await asyncio.gather(*futures)
 
-    async def exec(self, curr_round: int = -1, with_putflag: bool = False):
-        if with_putflag:
+    async def exec(self, curr_round: int = -1, with_put: bool = False):
+        if with_put:
             await self.request("putflag")
+            await self.request("putnoise")
         coros = []
         if curr_round >= 0 and curr_round < self.round_id + 3:
             coros.append(run_in(30, self.request("getflag")))
+        if curr_round >= 0 and curr_round < self.round_id + 3:
+            coros.append(run_in(30, self.request("getnoise")))
+        if curr_round < self.round_id + 3:
+            coros.append(run_before(60, self.request("havoc")))
+            coros.append(run_before(40, self.request("havoc")))
         for variant in self.variants:
             for _ in range(self.exploits_amount):
                 coros.append(run_before(60, variant.request("exploit")))
@@ -270,7 +276,7 @@ async def main():
     tasks: List[asyncio.Task] = []
 
     async with aiohttp.ClientSession(CHECKER_ADDR) as client:
-        for i in range(1):
+        for i in range(10):
             round = Round(
                 client,
                 curr_round,
@@ -278,40 +284,30 @@ async def main():
                 multiplier=MULTIPLIER,
                 exploits_amount=EXPLOITS_AMOUNT,
             )
-            await round.request("havoc")
-            # await round.request("putnoise")
-            # await round.request("getnoise")
+            await round.request("putflag")
+            await round.request("putnoise")
+            rounds.append(round)
             curr_round += 1
-        # for i in range(10):
-        #     round = Round(
-        #         client,
-        #         curr_round,
-        #         VARIANTS,
-        #         multiplier=MULTIPLIER,
-        #         exploits_amount=EXPLOITS_AMOUNT,
-        #     )
-        #     await round.request("putflag")
-        #     rounds.append(round)
-        #     curr_round += 1
-        #
-        # for i in range(TICKS):
-        #     print("TICK", i)
-        #     start = time.monotonic()
-        #     round = Round(
-        #         client,
-        #         curr_round,
-        #         VARIANTS,
-        #         multiplier=MULTIPLIER,
-        #         exploits_amount=EXPLOITS_AMOUNT,
-        #     )
-        #
-        #     tasks.append(asyncio.create_task(round.exec(with_putflag=True)))
-        #     for _round in rounds[-EXPLOIT_PAST_ROUNDS:]:
-        #         tasks.append(asyncio.create_task(_round.exec(curr_round)))
-        #
-        #     await asyncio.sleep(60)
-        #     print(f"TICK {i} END ({str(time.monotonic() - start)[:5]})")
-        #     curr_round += 1
+
+        for i in range(TICKS):
+            print("TICK", i)
+            start = time.monotonic()
+            round = Round(
+                client,
+                curr_round,
+                VARIANTS,
+                multiplier=MULTIPLIER,
+                exploits_amount=EXPLOITS_AMOUNT,
+            )
+
+            tasks.append(asyncio.create_task(round.exec(with_put=True)))
+            for _round in rounds[-EXPLOIT_PAST_ROUNDS:]:
+                tasks.append(asyncio.create_task(_round.exec(curr_round)))
+            rounds.append(round)
+
+            await asyncio.sleep(60)
+            print(f"TICK {i} END ({str(time.monotonic() - start)[:5]})")
+            curr_round += 1
 
         await asyncio.gather(*tasks)
 
