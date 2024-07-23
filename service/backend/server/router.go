@@ -40,9 +40,9 @@ func NewRouter(docker *service.DockerService, pgUrl string, containerLogsPath st
 	devenvController := controller.NewDevenvController(docker, devenvFilesPath, devenvFilesTmpPath)
 	replController := controller.NewReplController(docker, &replState)
 
-	cleanup := service.Cleanup(docker, &replState, containerLogsPath, devenvFilesPath, devenvFilesTmpPath)
-	cleanup.DoCleanup()
-	cleanup.StartTask()
+	// cleanup := service.Cleanup(docker, &replState, containerLogsPath, devenvFilesPath, devenvFilesTmpPath)
+	// cleanup.DoCleanup()
+	// cleanup.StartTask()
 
 	engine := gin.Default()
 
