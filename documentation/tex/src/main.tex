@@ -359,15 +359,15 @@ To get the contents of a DEVENV file the owner can request
 \end{center}
 However, all \robotomonoRegular{/api/devenv/...} endpoints also accept a query parameter \robotomonoRegular{?uuid=<otheruuid>} which overloads the \robotomonoRegular{<devenvuuid>} when specified.
 
-\lstinputlisting[caption=service/backend/server/router.go\ (l.110-148), style=go, label={lst:devenv-uuid-snippet}]{src/devenv-uuid-snippet.go}
+\lstinputlisting[caption=service/backend/server/router.go\ (lines\ 110-148), style=go, label={lst:devenv-uuid-snippet}]{src/devenv-uuid-snippet.go}
 
 The extracted DEVENV and \robotomonoRegular{uuid} are saved in the current requests context. We can see, that \robotomonoRegular{id} is seemingly sanitized via \robotomonoRegular{util.ExtractUuid}. Instead of using the \robotomonoRegular{devenv} from the context (that definitely belongs to the current user), the eventually executed controller function \robotomonoRegular{GetFileContent} uses the \robotomonoRegular{uuid} to compute the path of the requested file content.
 
-\lstinputlisting[caption=service/backend/controller/devenv.go\ (l.239-262), style=go, label={lst:devenv-file-content-snippet}]{src/devenv-file-content-snippet.go}
+\lstinputlisting[caption=service/backend/controller/devenv.go\ (lines\ 239-262), style=go, label={lst:devenv-file-content-snippet}]{src/devenv-file-content-snippet.go}
 
 Herein lies the second vulnerability. Due to the \robotomonoRegular{util.ExtractUuid} function (seen in Listing \ref{lst:devenv-uuid-snippet}) which does not sanitize user input correctly, the adversary is able use path traversal to retrieve the contents of files belonging to DEVENVs owned by other users.
 
-\lstinputlisting[caption=service/backend/util/encoding.go\ (l.21-29), style=go, label={lst:extract-uuid-snippet}]{src/extract-uuid-snippet.go}
+\lstinputlisting[caption=service/backend/util/encoding.go\ (lines\ 21-29), style=go, label={lst:extract-uuid-snippet}]{src/extract-uuid-snippet.go}
 
 In line 6 in Listing \ref{lst:extract-uuid-snippet} the "i" of the left \robotomonoRegular{uuid} variable is not an ASCII "i". Instead it is the "Cyrillic Small Letter Byelorussian-Ukrainian I" (\robotomonoRegular{U+0456}), a unicode look-alike. Therefore, in line 8, the \robotomonoRegular{uuid} defined in line 1 which is just set to the user input is returned -- completely unescaped.
 
@@ -399,7 +399,7 @@ To fix this vulnerability, patch the \robotomonoRegular{GetFileContent} function
 
 All the ALPINEs share the same DIND network. That means an adversary can send requests to an ALPINEs CHILD-BACKEND from another ALPINE. But, the CHILD-BACKENDs API is secured with an API key, that is randomly generated once for all ALPINEs per service. This API key lies in the environment of the root user of an ALPINE. To register a user on an ALPINE the client sends some username and password key-pair. Without being properly sanitized, the password is forwarded by the MAIN-BACKEND to the target ALPINEs CHILD-BACKEND. The following code is then executed by the CHILD-BACKEND.
 
-\lstinputlisting[caption=service/image/service/user.go\ (l.148-188), style=go]{src/create-user-snippet.go}
+\lstinputlisting[caption=service/image/service/user.go\ (lines\ 148-188), style=go]{src/create-user-snippet.go}
 
 As we can see it is just a plain \robotomonoRegular{sh} command. Herein lies the third vulnerability. The adversary can execute abitrary \robotomonoRegular{sh} commands with root rights on an ALPINE.
 
