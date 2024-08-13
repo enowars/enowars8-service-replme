@@ -1,6 +1,6 @@
 # replme
 
-Throwaway devenvs in the web.
+REPLs and DEVENVs in the browser. Played at Enowars 8.
 
 ## getting started
 
