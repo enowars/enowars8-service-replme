@@ -1,0 +1,18 @@
+service/
+    backend/           - MAIN-BACKEND
+        controller/    - api controller for auth, devenvs, and repls
+        database/      - database init
+        model/         - database models
+        server/        - server and router
+        service/       - cleanup, docker interfacing, proxying, and repls
+        types/
+        util/
+    frontend/          - Next.js frontend
+    image/             - CHILD-BACKEND
+        controller/    - api controller for auth and terms
+        server/        - server and router
+        service/       - user management and terms management
+        types/
+        util/
+    nginx/             - reverse proxy config
+    postgres/          - database config

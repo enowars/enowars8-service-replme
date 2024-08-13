@@ -20,4 +20,3 @@ index 161560f..f4fecc6 100644
                 ctx.JSON(http.StatusBadRequest, gin.H{"error": "Illegal username"})
                 return
         }
-

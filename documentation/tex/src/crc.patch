@@ -1,5 +1,5 @@
 diff --git a/service/backend/controller/repl.go b/service/backend/controller/repl.go
-index 0b0f782..69f75be 100644
+index 0b0f782..bd7e2e7 100644
 --- a/service/backend/controller/repl.go
 +++ b/service/backend/controller/repl.go
 @@ -1,6 +1,8 @@
@@ -11,7 +11,7 @@ index 0b0f782..69f75be 100644
         "fmt"
         "net/http"
         "replme/service"
-@@ -44,8 +46,11 @@ func (repl *ReplController) Create(ctx *gin.Context) {
+@@ -44,8 +46,10 @@ func (repl *ReplController) Create(ctx *gin.Context) {
 
         util.SLogger.Debugf("[%-25s] Creating new REPL user", fmt.Sprintf("UN:%s..", createReplRequest.Username[:5]))
 
@@ -20,7 +20,6 @@ index 0b0f782..69f75be 100644
 +       hasher := sha256.New224()
 +       hasher.Write([]byte(createReplRequest.Username))
 +       hash := hasher.Sum(nil)
-+
 +       name := hex.EncodeToString(hash)
 
         util.SLogger.Debugf("[%-25s] Created new REPL user", fmt.Sprintf("UN:%s.. | NM:%s..", createReplRequest.Username[:5], name[:5]))

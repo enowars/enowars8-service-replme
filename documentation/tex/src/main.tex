@@ -26,7 +26,6 @@
     inputencoding=utf8/latin1,
     backgroundcolor=\color{gray!10},
     frame=single,
-    numbers=left,
     numberstyle=\tiny,
 }
 
@@ -39,6 +38,7 @@
     morecomment=[f][\color{red}]{-},
     morecomment=[f][\color{olive}]{+},
     captionpos=b,
+    numbers=left,
 }
 
 \lstdefinestyle{go}{
@@ -70,6 +70,7 @@
     breakatwhitespace=true,
     basicstyle=\ttfamily,
     captionpos=b,
+    numbers=left,
 }
 
 \lstdefinestyle{python}{
@@ -81,7 +82,8 @@
     showstringspaces=false,
     tabsize=4,
     breaklines=true,
-    captionpos=b
+    captionpos=b,
+    numbers=left,
 }
 
 \lstdefinestyle{bash}{
@@ -93,7 +95,8 @@
     showstringspaces=false,
     tabsize=4,
     breaklines=true,
-    captionpos=b
+    captionpos=b,
+    numbers=left,
 }
 
 \usepackage{hyperref}
@@ -161,6 +164,11 @@ The infrastructure consists of a nginx reverse-proxy that forwards all requests 
 To spawn a REPL or compile code in a DEVENV the MAIN-BACKEND interfaces with a docker-in-docker instance (DIND) to create Alpine Linux containers (hereafter ALPINEs). The IO of the command running on the aplines is proxied to the web client by the MAIN-BACKEND. \\
 
 The ALPINEs themselves have another golang+gin backend running on them (hereafter CHILD-BACKEND). The MAIN-BACKEND interfaces with the CHILD-BACKEND to create/authenticate users and spawn commands on the ALPINEs.
+
+\section{Directory Structure}
+
+\lstinputlisting[]{src/dir-structure.txt}
+
 \section{Vulnerability \#1 -- CRC}
 
 \subsection{How it works}
@@ -357,15 +365,15 @@ To get the contents of a DEVENV file the owner can request
 \begin{center}
 	\robotomonoRegular{GET /api/devenv/<devenvuuid>/files/<filename>}
 \end{center}
-However, all \robotomonoRegular{/api/devenv/...} endpoints also accept a query parameter \robotomonoRegular{?uuid=<otheruuid>} which overloads the \robotomonoRegular{<devenvuuid>} when specified.
+However, all \robotomonoRegular{/api/devenv/...} endpoints also accept a query parameter \robotomonoRegular{?uuid=<otheruuid>} which, when specified, overloads the \robotomonoRegular{<devenvuuid>}.
 
 \lstinputlisting[caption=service/backend/server/router.go\ (lines\ 110-148), style=go, label={lst:devenv-uuid-snippet}]{src/devenv-uuid-snippet.go}
 
-The extracted DEVENV and \robotomonoRegular{uuid} are saved in the current requests context. We can see, that \robotomonoRegular{id} is seemingly sanitized via \robotomonoRegular{util.ExtractUuid}. Instead of using the \robotomonoRegular{devenv} from the context (that definitely belongs to the current user), the eventually executed controller function \robotomonoRegular{GetFileContent} uses the \robotomonoRegular{uuid} to compute the path of the requested file content.
+The extracted DEVENV and \robotomonoRegular{uuid} are saved in the current requests context. We can see, that \robotomonoRegular{id} is seemingly sanitized via \robotomonoRegular{util.ExtractUuid}. Instead of using the DEVENV from the context (that definitely belongs to the current user), the eventually executed controller function \robotomonoRegular{GetFileContent} uses the \robotomonoRegular{uuid} to compute the path of the requested file content.
 
 \lstinputlisting[caption=service/backend/controller/devenv.go\ (lines\ 239-262), style=go, label={lst:devenv-file-content-snippet}]{src/devenv-file-content-snippet.go}
 
-Herein lies the second vulnerability. Due to the \robotomonoRegular{util.ExtractUuid} function (seen in Listing \ref{lst:devenv-uuid-snippet}) which does not sanitize user input correctly, the adversary is able use path traversal to retrieve the contents of files belonging to DEVENVs owned by other users.
+Herein lies the second vulnerability. Due to the \robotomonoRegular{util.ExtractUuid} function which does not sanitize user input correctly, the adversary is able to use path traversal to retrieve the contents of files belonging to DEVENVs owned by other users.
 
 \lstinputlisting[caption=service/backend/util/encoding.go\ (lines\ 21-29), style=go, label={lst:extract-uuid-snippet}]{src/extract-uuid-snippet.go}
 
@@ -397,7 +405,7 @@ To fix this vulnerability, patch the \robotomonoRegular{GetFileContent} function
 
 \subsection{How it works}
 
-All the ALPINEs share the same DIND network. That means an adversary can send requests to an ALPINEs CHILD-BACKEND from another ALPINE. But, the CHILD-BACKENDs API is secured with an API key, that is randomly generated once for all ALPINEs per service. This API key lies in the environment of the root user of an ALPINE. To register a user on an ALPINE the client sends some username and password key-pair. Without being properly sanitized, the password is forwarded by the MAIN-BACKEND to the target ALPINEs CHILD-BACKEND. The following code is then executed by the CHILD-BACKEND.
+All the ALPINEs share the same DIND network. That means an adversary can send requests to an ALPINEs CHILD-BACKEND from another ALPINE. But, the CHILD-BACKENDs API is secured with an API key that is randomly generated once for all ALPINEs per service. This API key lies in the environment of the root user of an ALPINE. To register a user on an ALPINE the client sends some username and password key-pair. Without being properly sanitized, the password is forwarded by the MAIN-BACKEND to the target ALPINEs CHILD-BACKEND. The following code is then executed by the CHILD-BACKEND.
 
 \lstinputlisting[caption=service/image/service/user.go\ (lines\ 148-188), style=go]{src/create-user-snippet.go}
 
