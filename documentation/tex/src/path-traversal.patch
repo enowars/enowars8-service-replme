@@ -1,0 +1,32 @@
+diff --git a/service/backend/controller/devenv.go b/service/backend/controller/devenv.go
+index cd56dbc..eb91a0b 100644
+--- a/service/backend/controller/devenv.go
++++ b/service/backend/controller/devenv.go
+@@ -7,7 +7,6 @@ import (
+        "net/http"
+        "os"
+        "path/filepath"
+-       "strings"
+        "time"
+
+        "replme/database"
+@@ -237,17 +236,10 @@ func (devenv *DevenvController) CreateFile(ctx *gin.Context) {
+ }
+
+ func (devenv *DevenvController) GetFileContent(ctx *gin.Context) {
+-       _uuid, _ := ctx.Get("uuid")
+-       uuid := _uuid.(string)
++       _devenv, _ := ctx.Get("current_devenv")
++       currentDevenv := _devenv.(model.Devenv)
+        name := ctx.Param("name")
+-       path := filepath.Join(devenv.DevenvFilesPath, uuid, name)
+-
+-       if !strings.HasPrefix(path, devenv.DevenvFilesPath) {
+-               ctx.AbortWithStatusJSON(http.StatusBadRequest, &gin.H{
+-                       "error": "Invalid uuid",
+-               })
+-               return
+-       }
++       path := filepath.Join(devenv.DevenvFilesPath, currentDevenv.ID, name)
+
+        content, err := util.GetFileContent(path)

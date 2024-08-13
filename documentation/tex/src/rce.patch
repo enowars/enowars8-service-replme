@@ -1,0 +1,23 @@
+diff --git a/service/image/controller/user.go b/service/image/controller/user.go
+index 161560f..f4fecc6 100644
+--- a/service/image/controller/user.go
++++ b/service/image/controller/user.go
+@@ -34,7 +34,7 @@ func (user *UserController) Login(ctx *gin.Context) {
+                return
+        }
+
+-       if len(credentials.Password) < 4 || len(credentials.Password) > 64 {
++       if len(credentials.Password) < 4 || len(credentials.Password) > 64 || !regexp.MustCompile(`^[a-zA-Z0-9]*$`).MatchString(credentials.Password) {
+                ctx.JSON(http.StatusBadRequest, gin.H{"error": "Illegal username"})
+                return
+        }
+@@ -65,7 +65,7 @@ func (user *UserController) Register(ctx *gin.Context) {
+                return
+        }
+
+-       if len(credentials.Password) < 4 || len(credentials.Password) > 64 {
++       if len(credentials.Password) < 4 || len(credentials.Password) > 64 || !regexp.MustCompile(`^[a-zA-Z0-9]*$`).MatchString(credentials.Password) {
+                ctx.JSON(http.StatusBadRequest, gin.H{"error": "Illegal username"})
+                return
+        }
+

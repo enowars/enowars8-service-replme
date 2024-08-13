@@ -5,5 +5,6 @@
 
 checker/data
 service/data
-documentation/crc/crc.sage.py
+documentation/crc.sage.py
+documentation/tex/target
 
