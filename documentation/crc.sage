@@ -210,7 +210,4 @@ def calculate_pre_image(p, s):
     # service_file.close()
     print()
 
-# calculate_pre_image(get_random_prime_polynom(251), "a"*60)
 calculate_pre_image(0x8561cc4ee956c6503c5da0ffacb20feabb3eb142e7645e7ff1a2067fd8e1cfb, "a"*60)
-# calculate_pre_image(0xD5, "a"*2)
-# calculate_pre_image(0x14, "s")
