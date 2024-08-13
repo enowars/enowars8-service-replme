@@ -1,0 +1,56 @@
+-- 8-10 min
+
+## Whats your service (Vulns)?
+> many dockers
+> - henning 2024
+- service providing tmp repls
+- soon providing replit-like devenvs
+- tmp repl container name calculated by crc251 checksum of username
+- many second pre-images (math involved)
+- second pre-image username leads to same name -> secrets leaked
+
+## What works?
+- service:
+    - server+dind were stable, no crashes, no unexpected behaviour
+    - cleanup functionality worked
+    - no unintended vulns have been found
+
+- checker:
+    - checker stable in overall (few exceptions later)
+    - put/getflag were stable, put/getnoise were mostly stable, havoc was stable
+    - checker correctly detected dead service
+
+- vuln:
+    - [christian] medium+ to hard difficulty -- yesss!
+    - [christian] large code base with much to look through
+
+- fix:
+    - worked (only tested locally, details later)
+
+## What doesn't?
+- service:
+    - [henning] welcome page says cafedodo -- no it doesn't
+    - [moaath]  needs css treatment -- yes it does (screenshot)
+    - [moaath]  idea with server unclear -- devenvs, soon (tm)
+    - rebuilding docker-compose failed due to ip blacklisting
+    -> adjust Dockerfile to fetch go dependencies prior to src copy
+    -> that way image with go dependencies can be cached and reused
+
+- checker
+    - checker sometimes raised exception
+    - due to putnoise timing out -> no information in chaindb
+    - getnoise tries receiving that information from chaindb -> exception
+    -> checker needs careful tweaking of timeouts (2.6 secs munchkin)
+    -> wrap chaindb calls in `try+except`
+
+## Misc
+- dind can be ram killer when sessions are not destroyed
+- players could dos service by opening many sessions without killing
+-> node.js server on dockers eats >60MB ram -> rewrite in rust
+-> user sessions have to be monitored to detect malicious behaviour
+
+## Lessons learned
+- stress test service more, e.g. on vm with less cores, less ram, x times traffic
+- don't get caught in details, your css suffers from it
+- design dockerfiles for more cachable layers
+

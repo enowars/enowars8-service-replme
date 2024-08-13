@@ -6,5 +6,7 @@
 checker/data
 service/data
 documentation/crc.sage.py
-documentation/tex/target
+documentation/documentation/target
+documentation/iisc-test-ctf-slides/target
+documentation/iisc-enowars-slides/target
 

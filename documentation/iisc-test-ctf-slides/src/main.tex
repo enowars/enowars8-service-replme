@@ -1,0 +1,200 @@
+\documentclass[10pt]{beamer}
+
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{fontspec}
+\usepackage{hyperref}
+\usepackage[absolute,overlay]{textpos}
+\usepackage{emoji}
+
+\graphicspath{ {./src/} }
+
+\usefonttheme{professionalfonts}
+\usefonttheme{serif}
+\setmainfont{DejaVuSansMono}
+\setmonofont{DejaVuSansMono-Bold}
+
+\usetheme{Berlin}
+\usecolortheme{beaver}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+}
+
+
+\title{IISC/CTF: replme}
+\subtitle{Review of TestCTF\#1}
+\author{Jacob Bachmann}
+
+\institute
+{
+  SecT\\
+  TU Berlin
+}
+
+\logo{
+	\includegraphics[scale=0.07]{sect-logo}
+}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{frame}
+	\only<1>{
+		\begin{center}
+			\LARGE{\texttt{About service: replme}}
+		\end{center}
+	}
+	\only<2->{\frametitle{About service: replme}}
+	\only<2>{
+		\begin{center}
+			\includegraphics[scale=0.07]{henning-avatar}\\
+			"many dockers"\\
+			-- henning --
+		\end{center}
+	}
+	\only<3->{
+		\begin{itemize}
+			\item<3-> Provides temporary REPLs
+			\item<4-> Soon\texttrademark\ implements temp Devenvs \`a la \href{http://replit.com}{replit.com}
+			\item<5-> Vuln\#1: Exploit through second pre-image attack
+		\end{itemize}
+	}
+	\begin{center}
+		\only<3-5>{\vspace{1.05cm}}
+		\only<6>{\includegraphics[scale=0.3]{arch1}}
+		\only<7>{\vspace{0.01cm}\includegraphics[scale=0.3]{arch2}}
+	\end{center}
+\end{frame}
+
+\begin{frame}
+	\only<1>{
+		\begin{center}
+			\LARGE{\texttt{What works?}}
+		\end{center}
+	}
+	\only<2->{\frametitle{What works?}}
+	\only<2-4>{
+		\texttt{Service}
+		\begin{itemize}
+			\item Stability: No crashes, no unexpected behaviour
+			\item Cleanup: Garbage collected
+			\item Security: No unintended vulns have been found
+		\end{itemize}
+		\pause
+		\pause
+		\texttt{Checker}
+		\begin{itemize}
+			\item Stability: Mostly (later more)
+			      \begin{itemize}
+				      \item put/getflag stable
+				      \item put/getnoise mostly stable
+				      \item havoc stable
+			      \end{itemize}
+			\item Functionality: Detected dead services as intended
+		\end{itemize}
+		\pause
+		\texttt{Fix}
+		\begin{itemize}
+			\item Worked locally (more details later)
+		\end{itemize}
+	}
+	\only<5->{
+		\texttt{Feedback Christian}
+		\begin{itemize}
+			\item Vuln: Medium+ to hard difficulty
+			\item Codebase: Large with much to look through
+		\end{itemize}
+	}
+\end{frame}
+
+\begin{frame}
+	\only<1>{
+		\begin{center}
+			\LARGE{\texttt{What doesn't?}}
+		\end{center}
+	}
+	\only<2->{\frametitle{What doesn't?}}
+	\only<2->{
+		\texttt{Service}
+		\begin{itemize}
+			\item<2-> Henning: Welcome page says "cafedodo"
+			\item<3-> M[o]aath: Needs CSS treatment
+			\item<5-> M[o]aath: Idea with server unclear
+			\item<6-> Service rebuild failed due to IP blacklisting
+			      \begin{itemize}
+				      \item $\Rightarrow$ Adjust Dockerfile
+			      \end{itemize}
+		\end{itemize}
+		\only<4>{
+			\begin{picture}(0,0)
+				\put(0,-80){\includegraphics[width=5cm]{home}}
+				\put(149,-80){\includegraphics[width=5cm]{css}}
+			\end{picture}
+		}
+		\pause
+		\pause
+		\pause
+		\pause
+		\pause
+		\pause
+		\texttt{Checker}
+		\begin{itemize}
+			\item<7-> Putnoise sometimes timed out
+			\item<8-> No information in chaindb
+			\item<9-> Getnoise can't retrieve chaindb info \\ $\Rightarrow$ exception
+			      \begin{itemize}
+				      \item<10-> $\Rightarrow$ Tweak timeouts (Munchkin: 2.6s)
+				      \item<11-> $\Rightarrow$ Wrap chaindb calls in try+catch
+			      \end{itemize}
+		\end{itemize}
+	}
+\end{frame}
+
+\begin{frame}
+	\only<1>{
+		\begin{center}
+			\LARGE{\texttt{Miscellaneous}}
+		\end{center}
+	}
+	\only<2->{\frametitle{Miscellaneous}}
+	\only<2>{
+		\begin{itemize}
+			\item Dind can be RAM killer when not GCed
+			\item Players could DOS contrahent service by opening
+			      many sessions without killing
+			\item $\Rightarrow$ Node.js server consumes >60MB RAM \\
+			      $\Rightarrow$ Rewrite in \emoji{crab}
+			\item $\Rightarrow$ Player sessions need to be monitored \\
+			      $\Rightarrow$ Malicious behaviour leads to ban
+		\end{itemize}
+	}
+\end{frame}
+
+\begin{frame}
+	\only<1>{
+		\begin{center}
+			\LARGE{\texttt{Lessons learned}}
+		\end{center}
+	}
+	\only<2->{\frametitle{Lessons learned}
+		\begin{itemize}
+			\item<2-> More stress testing, e.g. \\
+			      VM w/ low core and RAM amount + $x$ times traffic
+			\item<3-> Don't get caught in details, your CSS will suffer from it
+			\item<4-> Design Dockerfiles for chachable layer support
+		\end{itemize}
+	}
+\end{frame}
+
+\begin{frame}
+	\begin{center}
+		\includegraphics[scale=0.38]{thanks}
+	\end{center}
+\end{frame}
+
+\end{document}

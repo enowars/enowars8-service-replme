@@ -1,0 +1,71 @@
+<mxfile host="app.diagrams.net" modified="2024-07-22T20:39:26.901Z" agent="Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0" etag="yPUmrqQvly86HFDkY6S4" version="24.7.3" type="device">
+  <diagram name="Page-1" id="evIb6BeHTaSzVf6nZD_D">
+    <mxGraphModel dx="1039" dy="795" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endArrow=none;endFill=0;" edge="1" parent="1" source="tIu5kHcC8cKj6h1vcqv9-4" target="tIu5kHcC8cKj6h1vcqv9-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-4" value="" style="sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;fillColor=#434445;aspect=fixed;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;outlineConnect=0;shape=mxgraph.vvd.web_browser;" vertex="1" parent="1">
+          <mxGeometry x="150" y="240" width="112.68" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-22" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endArrow=none;endFill=0;" edge="1" parent="1" source="tIu5kHcC8cKj6h1vcqv9-9" target="tIu5kHcC8cKj6h1vcqv9-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-28" value="&lt;font face=&quot;Courier New&quot;&gt;/...&lt;/font&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="tIu5kHcC8cKj6h1vcqv9-22">
+          <mxGeometry x="0.0289" y="-3" relative="1" as="geometry">
+            <mxPoint x="6" y="9" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-23" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endArrow=none;endFill=0;" edge="1" parent="1" source="tIu5kHcC8cKj6h1vcqv9-9" target="tIu5kHcC8cKj6h1vcqv9-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-29" value="/api/..." style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Courier New;" vertex="1" connectable="0" parent="tIu5kHcC8cKj6h1vcqv9-23">
+          <mxGeometry x="-0.0679" relative="1" as="geometry">
+            <mxPoint x="23" y="-9" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-9" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://docs.altinn.studio/technology/tools/nginx/nginx.png;" vertex="1" parent="1">
+          <mxGeometry x="360" y="240" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-10" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://creazilla-store.fra1.digitaloceanspaces.com/icons/3244252/nextjs-icon-md.png;" vertex="1" parent="1">
+          <mxGeometry x="529.4" y="180" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-11" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://cdn.freebiesupply.com/logos/large/2x/postgresql-logo-png-transparent.png;" vertex="1" parent="1">
+          <mxGeometry x="680" y="180" width="58.2" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-24" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;endArrow=none;endFill=0;" edge="1" parent="1" source="tIu5kHcC8cKj6h1vcqv9-12" target="tIu5kHcC8cKj6h1vcqv9-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-12" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://www.rewan.dev/resources/img/gin.png;" vertex="1" parent="1">
+          <mxGeometry x="527.9" y="290" width="63" height="88.63" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-15" value="" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://res.cloudinary.com/stackrox/v1556559393/docker-hub-hack-blog-banner.png;" vertex="1" parent="1">
+          <mxGeometry x="629.1" y="310" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-16" value="&lt;font face=&quot;Courier New&quot;&gt;Nginx&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="370" y="320" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-17" value="&lt;font face=&quot;Courier New&quot;&gt;Next.js&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="529.4" y="240" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-18" value="&lt;font face=&quot;Courier New&quot;&gt;PostgreSQL&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="680" y="240" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-19" value="&lt;font face=&quot;Courier New&quot;&gt;Docker-in-Docker&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="643.65" y="390" width="130.9" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-20" value="&lt;font face=&quot;Courier New&quot;&gt;Gin Backend&lt;br&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="493.95" y="390" width="130.9" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-25" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.256;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;endArrow=none;endFill=0;" edge="1" parent="1" source="tIu5kHcC8cKj6h1vcqv9-12" target="tIu5kHcC8cKj6h1vcqv9-15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tIu5kHcC8cKj6h1vcqv9-27" value="&lt;font face=&quot;Courier New&quot;&gt;Client&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="176.34" y="320" width="60" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
